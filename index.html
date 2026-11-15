@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<!-- ════════════════════════════════════════════════════════════════════════
+     index.html — v1.0 — 15/11/2026 — PAGE DE SIGNATURE DES CERFA, HÉBERGÉE HORS DE GOOGLE (hébergement gratuit de pages statiques)
+     Même écran et même moteur que PortailPage.html v1.1 (fabriquée à partir d'elle). Va avec PortailClient.gs v1.3 (doPost).
+     POURQUOI : servie par script.google.com, la page casse chez les clients qui ont plusieurs comptes Google connectés
+       (« Impossible d'ouvrir le fichier », adresse en /u/1/). Hébergée ailleurs, le navigateur n'envoie plus ces comptes.
+     CETTE PAGE NE CONTIENT AUCUNE DONNÉE : ni client, ni véhicule, ni identifiant de classeur. Elle demande tout au portail
+       (projet HURELLE PORTAIL CLIENT) avec le jeton du lien ; les contrôles (jeton, nom, durée, signature unique) restent côté portail.
+     ⚠ UNE SEULE LIGNE À RÉGLER : API = l'adresse …/exec du déploiement du projet HURELLE PORTAIL CLIENT.
+     ⚠ Le « moteur » qui remplit les cerfa est le MÊME que celui du bloc « CERFA CESSION » de l'appli et de PortailPage.html :
+       un réglage de position doit être refait dans les trois (Claude régénère les trois fichiers ensemble).
+     ════════════════════════════════════════════════════════════════════════ -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Signature de vos documents</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#f1f3f4;color:#202124;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;font-size:16px;line-height:1.45}
+  .pc{max-width:680px;margin:0 auto;padding:14px 14px 70px}
+  .pc-tete{font-size:13px;letter-spacing:.5px;text-transform:uppercase;color:#5f6368;margin:4px 2px 10px}
+  .pc-tete b{color:#0d652d}
+  h1{font-size:21px;margin:0 0 10px;line-height:1.25}
+  h2{font-size:13px;margin:0 0 8px;text-transform:uppercase;letter-spacing:.4px;color:#5f6368}
+  .pc-bloc{background:#fff;border:1px solid #dadce0;border-radius:12px;padding:14px;margin-bottom:12px}
+  .pc-note{font-size:13.5px;color:#5f6368;margin:8px 0}
+  .pc-alerte{border:1px solid #f4c7c3;background:#fce8e6;color:#a50e0e;border-radius:12px;padding:12px 14px;margin-bottom:12px}
+  .pc-info{border:1px solid #fde293;background:#fef7e0;border-radius:12px;padding:12px 14px;margin-bottom:12px}
+  .pc-ok{border:1px solid #b7dfc2;background:#e6f4ea;color:#0d652d;border-radius:12px;padding:14px;margin-bottom:12px}
+  input[type=text]{width:100%;font-size:18px;padding:12px;border:1px solid #9aa0a6;border-radius:10px;background:#fff}
+  .pc-btn{display:block;width:100%;margin-top:10px;border:0;border-radius:12px;padding:15px;font-size:17px;font-weight:700;background:#188038;color:#fff;cursor:pointer;text-align:center;text-decoration:none}
+  .pc-btn.clair{background:#fff;color:#1a73e8;border:1px solid #1a73e8;font-weight:600}
+  .pc-btn[disabled]{background:#dadce0;color:#5f6368;cursor:default}
+  .pc-liste{margin:0;padding:0;list-style:none} .pc-liste li{padding:7px 0;border-bottom:1px solid #f1f3f4;display:flex;gap:10px} .pc-liste li:last-child{border-bottom:0}
+  .pc-liste span{flex:0 0 42%;color:#5f6368;font-size:14px} .pc-liste b{flex:1;min-width:0;overflow-wrap:anywhere}
+  .pc-doc{display:block;width:100%;height:auto;border:1px solid #dadce0;border-radius:8px;background:#fff;margin:6px 0 14px}
+  .pc-pad{display:block;width:100%;height:200px;border:2px dashed #1a73e8;border-radius:12px;background:#fff;touch-action:none}
+  label.pc-case{display:flex;gap:10px;align-items:flex-start;margin:0 0 12px;font-size:15px} label.pc-case input{flex:0 0 22px;width:22px;height:22px;margin-top:1px}
+  .pc-pied{font-size:12px;color:#5f6368;margin-top:18px;line-height:1.4}
+</style>
+</head>
+<body>
+<div class="pc" id="pc"><div class="pc-bloc">Chargement…</div></div>
+<script>
+(function(){
+  var API = 'https://script.google.com/macros/s/AKfycbz7hlJvBbmgROyEwacZMM3mkxKYA5XFk1qR51SjWrKKjqhe75qklsExjTQt9Q1FmVSf/exec';        // ⚠ adresse …/exec du projet HURELLE PORTAIL CLIENT
+  var JETON = ((/[?&]t=([A-Za-z0-9]+)/.exec(location.search) || [])[1] || '').slice(0, 64);
+  var CDN = 'https://cdnjs.cloudflare.com/ajax/libs/';
+  var LIB = { pdflib:CDN + 'pdf-lib/1.17.1/pdf-lib.min.js', pdfjs:CDN + 'pdf.js/3.11.174/pdf.min.js', worker:CDN + 'pdf.js/3.11.174/pdf.worker.min.js' };
+  var DOCS = [['cession', 'CESSION_VENTE', 'Certificat de cession', 2], ['mandat', 'MANDAT_IMMAT', 'Mandat d\'immatriculation', 1], ['demande', 'DEMANDE_CERTIFICAT', 'Demande de certificat d\'immatriculation', 1]];
+  var ET = 'CESSION_VENTE';
+  var C = { immat:'' }, LIBS = {}, MODELES = null, S = { nom:'', D:null, docs:[], images:[], trace:false, vendeur:'' };
+
+  function E(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return '&#' + c.charCodeAt(0) + ';'; }); }
+  function lib(url, pret){
+    if (pret()) return Promise.resolve();
+    if (LIBS[url]) return LIBS[url];
+    LIBS[url] = new Promise(function(ok, ko){
+      var s = document.createElement('script'); s.src = url;
+      s.onload = function(){ if (pret()) ok(); else { delete LIBS[url]; ko(new Error('bibliothèque illisible')); } };
+      s.onerror = function(){ delete LIBS[url]; ko(new Error('bibliothèque injoignable')); };
+      document.head.appendChild(s);
+    });
+    return LIBS[url];
+  }
+  // Appels au portail : une requête simple (sans les comptes Google du navigateur), réponse en JSON
+  var FCT = { portailOuvrir:'ouvrir', portailSigner:'signer', portailCopie:'copie' };
+  function srv(nom, args){
+    if (!/^https:\/\//.test(API)) return Promise.reject(new Error('adresse du portail non réglée'));
+    return fetch(API, { method:'POST', credentials:'omit', redirect:'follow', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body:JSON.stringify({ f:FCT[nom], a:args || [] }) })
+      .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  }
+  function deB64(t){ var bin = atob(t), u = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
+  function p2(n){ return ('0' + n).slice(-2); }
+  function aujourdhui(){ var d = new Date(); return p2(d.getDate()) + '/' + p2(d.getMonth() + 1) + '/' + d.getFullYear(); }
+  function maintenant(){ var d = new Date(); return p2(d.getHours()) + ':' + p2(d.getMinutes()); }
+
+  // ───────────────────────── REMPLISSAGE DES CERFA (même moteur que l'appli) ─────────────────────────
+  var K = 72 / 110;
+  // Outils de dessin d'une page
+  function outils(pg, f, L){
+    var H = pg.getHeight(), bleu = L.rgb(0, 0, 0.5);
+    function propre(s){ return String(s == null ? '' : s).replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/[^\x20-\x7E -ÿ]/g, '?'); }
+    var o = {
+      T:function(s, x, y, larg, taille){                                 // texte libre, réduit s'il dépasse la largeur disponible
+        s = propre(s); if (!s) return; var sz = taille || 9.5;
+        while (larg && sz > 5.5 && f.widthOfTextAtSize(s, sz) > larg * K) sz -= 0.5;
+        pg.drawText(s, { x:x * K, y:H - y * K, size:sz, font:f, color:bleu });
+      },
+      Cs:function(s, bords, y, taille){                                  // un caractère par case
+        s = propre(s).toUpperCase(); var sz = taille || 10;
+        for (var i = 0; i < s.length && i < bords.length - 1; i++){
+          var c = s.charAt(i), cx = (bords[i] + bords[i + 1]) / 2 * K;
+          pg.drawText(c, { x:cx - f.widthOfTextAtSize(c, sz) / 2, y:H - y * K, size:sz, font:f, color:bleu });
+        }
+      },
+      X:function(x, y){ pg.drawText('X', { x:(x - 4.6) * K, y:H - (y + 4.6) * K, size:10, font:f, color:bleu }); },      // (x, y) = centre de la case
+      Dt:function(s, bj, bm, ba, y){ var m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(s || '')); if (m){ o.Cs(m[1], bj, y); o.Cs(m[2], bm, y); o.Cs(m[3], ba, y); } },
+      image:function(img, z){
+        if (!img) return; var w = (z[2] - z[0]) * K, h = (z[3] - z[1]) * K, e = Math.min(w / img.width, h / img.height);
+        pg.drawImage(img, { x:z[0] * K + (w - img.width * e) / 2, y:H - z[3] * K + (h - img.height * e) / 2, width:img.width * e, height:img.height * e });
+      }
+    };
+    return o;
+  }
+  function chiffres(s){ return String(s || '').replace(/\D/g, ''); }
+  function formule9(D){ return String(D.formule || '').replace(/\s/g, '').replace(/^20/, ''); }
+  function embarquer(doc, octets){ return octets ? doc.embedPng(octets).catch(function(){ return doc.embedJpg(octets); }).catch(function(){ return null; }) : Promise.resolve(null); }
+
+  // ── 1) CERTIFICAT DE CESSION 15776*02 (2 pages identiques : exemplaire ancien propriétaire, exemplaire nouveau propriétaire) ──
+  var G = {
+    immat:[54.5, 76.0, 97.8, 119.2, 141.0, 162.8, 184.2, 206.0, 227.8, 249.2],
+    vin:[265.2, 286.8, 308.5, 330.2, 351.8, 373.5, 395.2, 416.8, 438.5, 460.0, 481.8, 503.5, 525.0, 546.8, 568.2, 590.0, 611.8, 633.2],
+    mecJ:[673.2, 690.5, 707.8], mecM:[712.2, 729.8, 747.0], mecA:[751.5, 769.0, 786.2, 803.5, 821.0],
+    formule:[260.5, 282.2, 303.8, 325.5, 347.0, 368.8, 390.5, 412.0, 433.8, 455.2],
+    certJ:[339.8, 357.0, 374.2], certM:[379.0, 396.2, 413.5], certA:[418.2, 435.5, 452.8, 470.2, 487.5],
+    siret:[602.8, 620.2, 637.5, 654.8, 672.2, 689.5, 706.8, 724.2, 741.5, 758.8, 776.0, 793.5, 810.8, 828.0, 845.5],
+    cp:[164.5, 186.0, 207.8, 229.2, 251.0, 272.8],
+    venteJ:[71.5, 89.0, 106.2], venteM:[110.8, 128.2, 145.5], venteA:[150.0, 167.2, 184.8, 202.0, 219.2], venteH:[233.8, 251.0, 268.2], venteMn:[285.5, 303.0, 320.2],
+    neJ:[108.2, 125.5, 142.8], neM:[147.5, 164.8, 182.0], neA:[186.8, 204.0, 221.2, 238.5, 256.0]
+  };
+  var Y = { l1:186, l2:220, km:260, formule:303, cert:338, vPers:406, vMorale:421, vNom:455, vAdr:499, vCp:531, ceder:568, vente:597, c1:643, c2:673, vFait:777,
+            aPers:913, aMorale:928, aNom:962, aNe:995, aAdr:1026, aCp:1058, a1:1113, a2:1132, aFait:1167, oppo:1260 };
+  var ZONE_V = [432, 762, 592, 856], ZONE_A = [432, 1150, 592, 1244];       // zones tampon / signature : [x0, y0, x1, y1]
+
+  function remplirCession(D, opt){
+    var L = PDFLib;
+    return L.PDFDocument.load(MODELES.cession).then(function(doc){
+      return Promise.all([doc.embedFont(L.StandardFonts.Helvetica), embarquer(doc, MODELES.tampon), embarquer(doc, opt.signature)]).then(function(r){
+        var f = r[0], tampon = r[1], sig = r[2];
+        doc.getPages().forEach(function(pg){
+          var o = outils(pg, f, L), T = o.T, Cs = o.Cs, X = o.X, Dt = o.Dt;
+          // Véhicule
+          Cs(String(D.immat).replace(/\s/g, ''), G.immat, Y.l1); Cs(D.vin, G.vin, Y.l1); Dt(D.mec, G.mecJ, G.mecM, G.mecA, Y.l1);
+          T(D.marque, 58, Y.l2, 190); T(D.tvv, 270, Y.l2, 196); T(D.genre, 494, Y.l2, 160); T(D.denom, 678, Y.l2, 170); T(D.km, 322, Y.km, 92);
+          if (D.certif === 'date'){ X(60, 300); Dt(D.dateCertif, G.certJ, G.certM, G.certA, Y.cert); }
+          else if (D.certif === 'absent'){ X(521.5, 297); T(D.motifAbsence, 518, 314, 330, 8.5); }
+          else { X(60, 300); Cs(formule9(D), G.formule, Y.formule); }      // n° vide : les cases restent blanches
+          // Ancien propriétaire (le garage)
+          var v = D.v;
+          if (v.morale) X(60, Y.vMorale); else { X(60, Y.vPers); X(v.sexe === 'F' ? 469 : 431, Y.vPers); }
+          T(v.nom, 142, Y.vNom, 428); Cs(chiffres(v.siret), G.siret, Y.vNom);
+          T(v.num, 170, Y.vAdr, 58); T(v.ext, 242, Y.vAdr, 60); T(v.type, 318, Y.vAdr, 102); T(v.voie, 434, Y.vAdr, 418);
+          Cs(chiffres(v.cp), G.cp, Y.vCp); T(v.ville, 295, Y.vCp, 555);
+          X(288, Y.ceder);
+          Dt(D.dateVente, G.venteJ, G.venteM, G.venteA, Y.vente);
+          var hm = /^(\d{1,2})[:hH](\d{2})$/.exec(String(D.heureVente || '')); if (hm){ Cs(p2(+hm[1]), G.venteH, Y.vente); Cs(hm[2], G.venteMn, Y.vente); }
+          X(60, Y.c1); X(60, Y.c2);
+          T(D.lieu, 102, Y.vFait, 168, 10); T(D.dateVente, 298, Y.vFait, 120, 10);
+          o.image(tampon, ZONE_V);
+          if (v.signataire) T(v.signataire, 600, 828, 250, 7.5);
+          // Nouveau propriétaire
+          var a = D.a;
+          if (a.morale) X(60, Y.aMorale); else { X(60, Y.aPers); if (a.sexe) X(a.sexe === 'F' ? 469 : 431, Y.aPers); }
+          T(a.nom, 142, Y.aNom, 428); if (a.morale) Cs(chiffres(a.siret), G.siret, Y.aNom);
+          if (!a.morale){ Dt(a.neLe, G.neJ, G.neM, G.neA, Y.aNe); T(a.neA, 284, Y.aNe - 3, 566); }
+          T(a.num, 170, Y.aAdr, 58); T(a.ext, 242, Y.aAdr, 60); T(a.type, 318, Y.aAdr, 102); T(a.voie, 434, Y.aAdr, 418);
+          Cs(chiffres(a.cp), G.cp, Y.aCp); T(a.ville, 295, Y.aCp, 555);
+          X(60, Y.a1); X(60, Y.a2);
+          T(D.lieu, 102, Y.aFait, 168, 10); T(D.dateVente, 298, Y.aFait, 120, 10);
+          if (D.opposition) X(786, Y.oppo);
+          if (sig){ o.image(sig, ZONE_A); T(opt.trace || '', 600, 1216, 250, 6.5); }
+        });
+        return doc.save();
+      });
+    });
+  }
+
+  // ── 2) MANDAT 13757*03 (1 page) : le client (mandant) donne mandat au garage (mandataire) ──
+  var GM = {
+    siret:[615.8, 633.2, 650.5, 667.8, 685.2, 702.5, 719.8, 737.0, 754.5, 771.8, 789.0, 806.5, 823.8, 841.0, 858.2],
+    cp:[157.5, 179.2, 200.8, 222.5, 244.2, 265.8],
+    vin:[174.2, 200.0, 226.0, 252.0, 278.0, 304.0, 330.0, 356.0, 382.0, 408.0, 434.0, 460.0, 486.0, 512.0, 538.0, 564.0, 589.8, 615.8],
+    j:[431.0, 452.8, 474.2], m:[483.0, 504.8, 526.2], a:[535.0, 556.5, 578.2, 600.0, 621.5]
+  };
+  var ZONE_M = [560, 1000, 860, 1122];
+  function remplirMandat(D, opt){
+    var L = PDFLib;
+    return L.PDFDocument.load(MODELES.mandat).then(function(doc){
+      // Ce modèle porte des cases interactives (format XFA) : on les retire pour garder la page telle qu'elle s'imprime
+      try { doc.catalog.delete(L.PDFName.of('AcroForm')); doc.getPages().forEach(function(p){ p.node.delete(L.PDFName.of('Annots')); }); } catch (e) {}
+      return Promise.all([doc.embedFont(L.StandardFonts.Helvetica), embarquer(doc, opt.signature)]).then(function(r){
+        var f = r[0], sig = r[1], pg = doc.getPages()[0], o = outils(pg, f, L), T = o.T, Cs = o.Cs, a = D.a, v = D.v;
+        T(a.nom, 172, 247, 410); if (a.morale) Cs(chiffres(a.siret), GM.siret, 250);
+        T(a.num, 160, 322, 62); T(a.ext, 234, 322, 58); T(a.type, 304, 322, 102); T(a.voie, 420, 322, 436);
+        Cs(chiffres(a.cp), GM.cp, 390); T(a.ville, 284, 388, 274); T('FRANCE', 580, 388, 274);
+        T(v.nom, 190, 459, 398); Cs(chiffres(v.siret), GM.siret, 462);
+        T(D.operation, 168, 564, 514);
+        T(D.marque + (D.denom ? ' ' + D.denom : ''), 182, 651, 428, 11); Cs(D.vin, GM.vin, 725, 11); T(D.immat, 366, 798, 336, 11);
+        o.X(59.5, 828.5);
+        T(D.lieu, 96, 950, 288, 10); o.Dt(D.dateVente, GM.j, GM.m, GM.a, 955);
+        if (D.opposition) o.X(541, 1228);
+        if (sig){ o.image(sig, ZONE_M); T(opt.trace || '', 560, 1136, 300, 6.5); }
+        return doc.save();
+      });
+    });
+  }
+
+  // ── 3) DEMANDE DE CERTIFICAT D'IMMATRICULATION 13750*07 (1 page) ──
+  var GD = {
+    achJ:[252.2, 274.0, 295.5], achM:[300.2, 321.8, 343.5], achA:[348.0, 369.8, 391.2, 413.0, 434.8],
+    cerJ:[463.0, 484.8, 506.2], cerM:[511.0, 532.5, 554.2], cerA:[558.8, 580.5, 602.2, 623.8, 645.5],
+    mecJ:[674.0, 695.5, 717.2], mecM:[721.8, 743.5, 765.0], mecA:[769.8, 791.2, 813.0, 834.8, 856.2],
+    siret:[614.5, 631.8, 649.2, 666.5, 683.8, 701.0, 718.5, 735.8, 753.0, 770.5, 787.8, 805.0, 822.2, 839.8, 857.0],
+    neJ:[86.2, 103.5, 120.8], neM:[125.5, 142.8, 160.0], neA:[164.8, 182.0, 199.2, 216.8, 234.0],
+    cp:[127.8, 145.2, 162.5, 179.8, 197.2, 214.5]
+  };
+  var ZONE_D = [56, 1118, 244, 1160];
+  function remplirDemande(D, opt){
+    var L = PDFLib;
+    return L.PDFDocument.load(MODELES.demande).then(function(doc){
+      return Promise.all([doc.embedFont(L.StandardFonts.Helvetica), embarquer(doc, opt.signature)]).then(function(r){
+        var f = r[0], sig = r[1], pg = doc.getPages()[0], o = outils(pg, f, L), T = o.T, Cs = o.Cs, X = o.X, Dt = o.Dt, a = D.a;
+        X(233, 121);                                                       // « Certificat »
+        T(D.immat, 58, 207, 164, 11); Dt(D.dateVente, GD.achJ, GD.achM, GD.achA, 209); Dt(D.mec, GD.mecJ, GD.mecM, GD.mecA, 209);
+        if (D.certif === 'date') Dt(D.dateCertif, GD.cerJ, GD.cerM, GD.cerA, 209);
+        if (D.certif === 'formule') T(String(D.formule || '').replace(/\s/g, ''), 58, 252, 228, 10);
+        T(D.marque, 56, 289, 266); T(D.denom, 348, 289, 140); T(D.tvv, 56, 321, 432); T(D.vin, 56, 353, 266, 10); T(D.genre, 348, 353, 140);
+        if (a.morale){ X(565, 459); Cs(chiffres(a.siret), GD.siret, 461, 9); } else { X(321, 459); if (a.sexe) X(a.sexe === 'F' ? 440 : 403, 459); }
+        T(a.nom, 118, 485, 464);
+        if (!a.morale){ Dt(a.neLe, GD.neJ, GD.neM, GD.neA, 517); T(a.neA, 264, 515, 294); }
+        T(a.num, 130, 567, 60, 8); T(a.ext, 206, 567, 72, 8); T(a.type, 292, 567, 112, 8); T(a.voie, 420, 567, 436, 8);
+        T(a.tel, 534, 589, 322, 8); Cs(chiffres(a.cp), GD.cp, 616, 9); T(a.ville, 232, 615, 286, 8.5); T(a.email, 534, 615, 322, 8);
+        T(D.lieu, 83, 1103, 68, 7); T(D.dateVente, 176, 1103, 70, 7);
+        if (D.opposition) X(255, 1196);
+        if (sig){ o.image(sig, ZONE_D); T(opt.trace || '', 52, 1170, 184, 5); }
+        return doc.save();
+      });
+    });
+  }
+  var REMPLIR = { cession:remplirCession, mandat:remplirMandat, demande:remplirDemande };
+  function remplirTous(D, opt){
+    var out = [], suite = Promise.resolve();
+    DOCS.filter(function(d){ return MODELES && MODELES[d[0]]; }).forEach(function(d){
+      suite = suite.then(function(){ return REMPLIR[d[0]](D, opt || {}); }).then(function(b){ out.push({ cle:d[0], et:d[1], lib:d[2], page:d[3], bytes:b }); });
+    });
+    return suite.then(function(){ return out; });
+  }
+  function rendreImage(bytes, page, largeur){
+    return lib(LIB.pdfjs, function(){ return typeof pdfjsLib !== 'undefined'; }).then(function(){
+      try { pdfjsLib.GlobalWorkerOptions.workerSrc = LIB.worker; } catch (e) {}
+      return pdfjsLib.getDocument({ data:bytes.slice(0) }).promise;
+    }).then(function(doc){
+      return doc.getPage(page).then(function(pg){
+        var vp = pg.getViewport({ scale:1 }); vp = pg.getViewport({ scale:largeur / vp.width });
+        var cv = document.createElement('canvas'); cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+        return pg.render({ canvasContext:cv.getContext('2d'), viewport:vp }).promise.then(function(){ var u = cv.toDataURL('image/jpeg', 0.85); try { doc.destroy(); } catch (e) {} return u; });
+      });
+    });
+  }
+  function fusionner(F){
+    var L = PDFLib;
+    return L.PDFDocument.create().then(function(out){
+      var suite = Promise.resolve(), detail = [];
+      function ajouter(f, garder){
+        return L.PDFDocument.load(f.bytes).then(function(src){
+          var idx = src.getPageIndices(); if (garder) idx = idx.slice(0, garder);
+          return out.copyPages(src, idx).then(function(pp){ pp.forEach(function(x){ out.addPage(x); }); return idx.length; });
+        });
+      }
+      F.forEach(function(f){
+        suite = suite.then(function(){ return ajouter(f); }).then(function(n){
+          if (f.et !== ET){ detail.push(f.lib); return; }
+          detail.push(f.lib + ' en 2 exemplaires');
+          if (n < 2) return ajouter(f, 1);                                 // modèle de cession d'une seule page : on la met deux fois
+        });
+      });
+      return suite.then(function(){ return out.save(); }).then(function(b){
+        return { url:URL.createObjectURL(new Blob([b], { type:'application/pdf' })), pages:out.getPageCount(), detail:detail.join(', '), nom:'CERFA__' + (C ? C.immat : '') + '.pdf' };
+      });
+    });
+  }
+  function rogner(cv){
+    try {
+      var w = cv.width, h = cv.height, d = cv.getContext('2d').getImageData(0, 0, w, h).data, x0 = w, y0 = h, x1 = -1, y1 = -1;
+      for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 20){ if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      if (x1 < 0) return cv;
+      var m = 6; x0 = Math.max(0, x0 - m); y0 = Math.max(0, y0 - m); x1 = Math.min(w - 1, x1 + m); y1 = Math.min(h - 1, y1 + m);
+      var o = document.createElement('canvas'); o.width = x1 - x0 + 1; o.height = y1 - y0 + 1;
+      o.getContext('2d').drawImage(cv, x0, y0, o.width, o.height, 0, 0, o.width, o.height);
+      return o;
+    } catch (e) { return cv; }
+  }
+
+  // ───────────────────────── ÉCRANS ─────────────────────────
+  function page(html, garage){ document.getElementById('pc').innerHTML = '<div class="pc-tete">' + (garage ? '<b>' + E(garage) + '</b> · ' : '') + 'Documents de vente</div>' + html; window.scrollTo(0, 0); }
+  function erreur(msg){ page('<div class="pc-alerte">' + E(msg) + '</div>', S.D && S.D.v && S.D.v.nom); }
+  var PANNE = 'Service momentanément indisponible. Vérifiez votre connexion et rouvrez le lien reçu par mail.';
+
+  // 1) Le lien est-il valable ?
+  function demarrer(){
+    if (!JETON){ erreur('Ce lien est incomplet. Ouvrez le lien reçu par mail, en entier.'); return; }
+    srv('portailOuvrir', [JETON, '']).then(function(r){ if (!r || !r.ok){ erreur((r && r.message) || PANNE); return; } ecranNom(''); }, function(){ erreur(PANNE); });
+  }
+  // 2) Nom de famille
+  function ecranNom(msg){
+    page('<div class="pc-bloc"><h1>Signature de vos documents de vente</h1>'
+      + '<p style="margin:0 0 12px;">Pour ouvrir vos documents, tapez votre <b>nom de famille</b> (ou le nom de votre société).</p>'
+      + (msg ? '<div class="pc-alerte">' + E(msg) + '</div>' : '')
+      + '<input type="text" id="pcNom" autocomplete="family-name" autocapitalize="characters" placeholder="Votre nom de famille">'
+      + '<button class="pc-btn" id="pcOuvrir">Ouvrir mes documents</button></div>'
+      + '<div class="pc-pied">Ce lien est personnel. Ne le transférez pas.</div>');
+    var i = document.getElementById('pcNom'), b = document.getElementById('pcOuvrir');
+    function go(){ var n = i.value.trim(); if (n.length < 2){ i.focus(); return; } b.disabled = true; b.textContent = 'Ouverture…'; ouvrir(n); }
+    b.onclick = go; i.onkeydown = function(e){ if (e.key === 'Enter') go(); };
+  }
+  function ouvrir(nom){
+    Promise.all([srv('portailOuvrir', [JETON, nom]), lib(LIB.pdflib, function(){ return typeof PDFLib !== 'undefined'; }).then(function(){ return true; }, function(){ return false; })]).then(function(r){
+      var d = r[0];
+      if (!d || !d.ok){ if (d && d.code === 'NOM') ecranNom(d.message); else erreur((d && d.message) || PANNE); return; }
+      S.nom = nom; S.D = d.D || {}; S.vendeur = d.vendeur || ''; S.expireLe = d.expireLe || ''; C.immat = String(S.D.immat || '');
+      S.D.a = S.D.a || {}; S.D.v = S.D.v || {};
+      MODELES = { cession:deB64(d.modeles.cession), mandat:d.modeles.mandat ? deB64(d.modeles.mandat) : null, demande:d.modeles.demande ? deB64(d.modeles.demande) : null, tampon:d.modeles.tampon ? deB64(d.modeles.tampon) : null };
+      S.D.dateVente = aujourdhui(); S.D.heureVente = maintenant();          // provisoire, pour l'aperçu : la vraie date est celle de la signature
+      page('<div class="pc-bloc">Préparation de vos documents…</div>', S.D.v.nom);
+      if (!r[1]){ S.docs = []; S.images = []; ecranDocuments(); return; }
+      remplirTous(S.D, {}).then(function(docs){ S.docs = docs; return images(docs); }).then(function(imgs){ S.images = imgs; ecranDocuments(); }, function(){ S.docs = []; S.images = []; ecranDocuments(); });
+    }, function(){ erreur(PANNE); });
+  }
+  function images(docs){
+    var out = [], suite = Promise.resolve();
+    docs.forEach(function(d){ suite = suite.then(function(){ return rendreImage(d.bytes, d.page, 1100).then(function(u){ out.push(u); }, function(){ out.push(''); }); }); });
+    return suite.then(function(){ return out; });
+  }
+  // 3) Vérification + signature
+  function ecranDocuments(){
+    var D = S.D, a = D.a, v = D.v, noms = DOCS.filter(function(d){ return MODELES[d[0]]; }).map(function(d){ return d[2]; });
+    var mandat = !!MODELES.mandat, demande = !!MODELES.demande;
+    function li(l, val){ return String(val || '').trim() ? '<li><span>' + E(l) + '</span><b>' + E(val) + '</b></li>' : ''; }
+    var adr = [a.num, a.ext, a.type, a.voie].filter(function(x){ return String(x || '').trim(); }).join(' ');
+    var h = '<div class="pc-bloc"><h1>Bonjour, vérifiez puis signez vos documents</h1>'
+      + '<p style="margin:0;">' + noms.length + ' document' + (noms.length > 1 ? 's' : '') + ' : <b>' + noms.map(E).join('</b>, <b>') + '</b>.</p></div>'
+      + '<div class="pc-bloc"><h2>Le véhicule</h2><ul class="pc-liste">' + li('Véhicule', [D.marque, D.denom].filter(String).join(' ')) + li('Immatriculation', D.immat) + li('N° de série (VIN)', D.vin)
+      + li('1re immatriculation', D.mec) + li('Kilométrage', D.km ? D.km + ' km' : '') + li('Vendu par', v.nom) + '</ul></div>'
+      + '<div class="pc-bloc"><h2>Vous (nouveau propriétaire)</h2><ul class="pc-liste">' + li(a.morale ? 'Société' : 'Nom et prénom', a.nom) + (a.morale ? li('SIRET', a.siret) : li('Né(e) le', a.neLe) + li('à', a.neA))
+      + li('Adresse', adr) + li('Code postal et commune', [a.cp, a.ville].filter(String).join(' ')) + li('Téléphone', a.tel) + li('Mél', a.email) + '</ul>'
+      + '<div class="pc-info" style="margin:12px 0 0;">Une information est fausse ? <b>Ne signez pas</b> et prévenez ' + E(S.vendeur || 'votre vendeur') + ' : les documents seront corrigés et un nouveau lien vous sera envoyé.</div></div>';
+    h += '<div class="pc-bloc"><h2>Vos documents</h2>';
+    if (S.docs.length) h += S.docs.map(function(d, i){ return '<div style="font-weight:700;">' + E(d.lib) + '</div>' + (S.images[i] ? '<img class="pc-doc" src="' + S.images[i] + '" alt="' + E(d.lib) + '">' : '<div class="pc-note">Aperçu indisponible sur cet appareil : les informations ci-dessus sont celles qui figurent sur ce document.</div>'); }).join('')
+      + '<div class="pc-note">Écartez deux doigts sur un document pour l\'agrandir. La date et l\'heure de la cession seront celles de votre signature.</div>';
+    else h += '<div class="pc-note">L\'aperçu des documents n\'est pas disponible sur cet appareil. Les informations ci-dessus sont celles qui figurent sur vos documents.</div>';
+    h += '</div><div class="pc-bloc"><h2>Votre signature</h2>'
+      + '<label class="pc-case"><input type="checkbox" id="pcLu"><span>J\'ai vérifié les informations de ces documents. Je certifie acquérir ce véhicule à la date et à l\'heure de ma signature, en ayant été informé de sa situation administrative'
+      + (mandat ? ' ; je donne mandat à ' + E(v.nom) + ' pour effectuer en mon nom les formalités d\'immatriculation, et je sais que je dois assurer ce véhicule avant de circuler' : '')
+      + (demande ? ' ; je demande le certificat d\'immatriculation à mon nom' : '') + '.</span></label>'
+      + '<label class="pc-case"><input type="checkbox" id="pcOppo"' + (D.opposition ? ' checked' : '') + '><span>Je m\'oppose à la réutilisation de mes données personnelles à des fins de prospection commerciale (facultatif).</span></label>'
+      + '<div class="pc-note">Signez dans le cadre, avec le doigt :</div><canvas id="pcPad" class="pc-pad"></canvas>'
+      + '<button class="pc-btn clair" id="pcEffacer">Effacer la signature</button>'
+      + '<div id="pcMsg"></div><button class="pc-btn" id="pcValider" disabled>Valider ma signature</button></div>'
+      + '<div class="pc-pied">Vos informations servent uniquement à établir les documents de vente et d\'immatriculation de ce véhicule. Elles sont conservées par ' + E(v.nom || 'le vendeur') + ' dans le dossier de la vente.'
+      + (S.expireLe ? ' Lien valable jusqu\'au ' + E(S.expireLe.replace(' ', ' à ')) + '.' : '') + '</div>';
+    page(h, v.nom);
+    var cv = document.getElementById('pcPad'), r = cv.getBoundingClientRect(), dpr = Math.min(3, window.devicePixelRatio || 1);
+    cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+    var cx = cv.getContext('2d'); cx.scale(dpr, dpr); cx.lineWidth = 2.4; cx.lineCap = 'round'; cx.lineJoin = 'round'; cx.strokeStyle = '#10247a';
+    var trace = false, long = 0, dernier = null, lu = document.getElementById('pcLu'), bt = document.getElementById('pcValider');
+    function pret(){ bt.disabled = !(S.trace && lu.checked) || S.envoi; }
+    function pos(e){ var b = cv.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; }
+    cv.onpointerdown = function(e){ e.preventDefault(); trace = true; dernier = pos(e); try { cv.setPointerCapture(e.pointerId); } catch (x) {} cx.beginPath(); cx.moveTo(dernier[0], dernier[1]); };
+    cv.onpointermove = function(e){ if (!trace) return; e.preventDefault(); var p = pos(e); long += Math.abs(p[0] - dernier[0]) + Math.abs(p[1] - dernier[1]); cx.lineTo(p[0], p[1]); cx.stroke(); dernier = p; if (long > 60){ S.trace = true; pret(); } };
+    cv.onpointerup = cv.onpointercancel = cv.onpointerleave = function(){ trace = false; };
+    document.getElementById('pcEffacer').onclick = function(){ cx.clearRect(0, 0, cv.width, cv.height); long = 0; S.trace = false; pret(); };
+    lu.onchange = pret; S.trace = false; S.envoi = false;
+    bt.onclick = function(){
+      if (!S.trace || !lu.checked || S.envoi) return;
+      var png = signaturePng(cv), oppo = document.getElementById('pcOppo').checked, msg = document.getElementById('pcMsg');
+      S.envoi = true; bt.disabled = true; bt.textContent = 'Enregistrement de votre signature…'; msg.innerHTML = '';
+      srv('portailSigner', [JETON, S.nom, png, oppo]).then(function(res){
+        if (!res || !res.ok){
+          if (res && (res.code === 'SIGNATURE' || res.code === 'PANNE')){ S.envoi = false; bt.textContent = 'Valider ma signature'; pret(); msg.innerHTML = '<div class="pc-alerte" style="margin:10px 0 0;">' + E(res.message) + '</div>'; }
+          else erreur((res && res.message) || PANNE);
+          return;
+        }
+        fini(res, png, oppo);
+      }, function(){ S.envoi = false; bt.textContent = 'Valider ma signature'; pret(); msg.innerHTML = '<div class="pc-alerte" style="margin:10px 0 0;">Connexion interrompue : votre signature n\'est pas partie. Appuyez à nouveau sur « Valider ma signature ».</div>'; });
+    };
+  }
+  // La signature, rognée et ramenée à 600 points de large au plus (image PNG en base64, sans l'en-tête)
+  function signaturePng(cv){
+    var src = rogner(cv), larg = 600, b = '';
+    for (var k = 0; k < 4; k++){
+      var e = Math.min(1, larg / src.width), o = document.createElement('canvas'); o.width = Math.max(1, Math.round(src.width * e)); o.height = Math.max(1, Math.round(src.height * e));
+      o.getContext('2d').drawImage(src, 0, 0, o.width, o.height);
+      b = o.toDataURL('image/png').split('base64,')[1] || '';
+      if (b.length <= 160000) break; larg = Math.round(larg / 1.6);
+    }
+    return b;
+  }
+  // 4) Merci + copie des documents signés (fabriquée dans le téléphone, rien n'est téléchargé depuis le serveur)
+  function fini(res, png, oppo){
+    var D = S.D, v = D.v;
+    var h = '<div class="pc-ok"><h1 style="color:#0d652d;">Merci, vos documents sont signés</h1>Signature enregistrée le <b>' + E(res.date) + '</b> à <b>' + E(res.heure) + '</b>. ' + E(S.vendeur || 'Votre vendeur') + ' est prévenu.</div>'
+      + '<div class="pc-bloc" id="pcCopie"><div class="pc-note">Préparation de votre copie…</div></div>'
+      + '<div class="pc-pied">Vous pouvez fermer cette page. Ce lien ne peut plus servir.</div>';
+    page(h, v.nom);
+    function prevenir(b64){ try { srv('portailCopie', [JETON, S.nom, b64 || '']).catch(function(){}); } catch (e) {} }   // mail au vendeur, avec ou sans pièce jointe
+    function sans(){ prevenir(''); var z = document.getElementById('pcCopie'); if (z) z.innerHTML = '<div class="pc-note">Votre exemplaire signé vous sera remis par ' + E(S.vendeur || 'votre vendeur') + '.</div>'; }
+    if (typeof PDFLib === 'undefined'){ sans(); return; }
+    D.dateVente = res.date; D.heureVente = res.heure; D.opposition = !!oppo;
+    remplirTous(D, { signature:deB64(png), trace:'Signé à distance le ' + res.date + ' à ' + res.heure + ' par ' + (D.a.nom || '') }).then(function(docs){
+      return fusionner(docs);
+    }).then(function(t){
+      fetch(t.url).then(function(r){ return r.arrayBuffer(); }).then(function(ab){
+        var u = new Uint8Array(ab), s = '', pas = 0x8000; for (var i = 0; i < u.length; i += pas) s += String.fromCharCode.apply(null, u.subarray(i, i + pas));
+        prevenir(btoa(s));
+      }, function(){ prevenir(''); });
+      var z = document.getElementById('pcCopie'); if (!z) return;
+      z.innerHTML = '<a class="pc-btn" id="pcCopieLien" href="' + t.url + '" download="' + E(t.nom) + '" target="_blank" rel="noopener">Garder une copie de mes documents (' + t.pages + ' pages)</a>'
+        + '<div class="pc-note">Certificat de cession, mandat et demande de certificat, signés. ' + E(S.vendeur || 'Votre vendeur') + ' vous remettra aussi votre exemplaire.</div>';
+    }).catch(sans);
+  }
+  window._pcEtat = S;                                                      // pour les essais
+  demarrer();
+})();
+</script>
+</body>
+</html>
