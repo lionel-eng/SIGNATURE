@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!-- ════════════════════════════════════════════════════════════════════════
-     index.html — v1.0 — 15/11/2026 — PAGE DE SIGNATURE DES CERFA, HÉBERGÉE HORS DE GOOGLE (hébergement gratuit de pages statiques)
-     Même écran et même moteur que PortailPage.html v1.1 (fabriquée à partir d'elle). Va avec PortailClient.gs v1.3 (doPost).
+     index.html — v1.1 — 15/11/2026 — PAGE DE SIGNATURE DES CERFA, HÉBERGÉE HORS DE GOOGLE (hébergement gratuit de pages statiques)
+     Même écran et même moteur que PortailPage.html v1.2 (fabriquée à partir d'elle). Va avec PortailClient.gs v1.4 (doPost, rangement automatique).
      POURQUOI : servie par script.google.com, la page casse chez les clients qui ont plusieurs comptes Google connectés
        (« Impossible d'ouvrir le fichier », adresse en /u/1/). Hébergée ailleurs, le navigateur n'envoie plus ces comptes.
      CETTE PAGE NE CONTIENT AUCUNE DONNÉE : ni client, ni véhicule, ni identifiant de classeur. Elle demande tout au portail
@@ -46,7 +46,7 @@
 <div class="pc" id="pc"><div class="pc-bloc">Chargement…</div></div>
 <script>
 (function(){
-  var API = 'https://script.google.com/macros/s/AKfycbz7hlJvBbmgROyEwacZMM3mkxKYA5XFk1qR51SjWrKKjqhe75qklsExjTQt9Q1FmVSf/exec';        // ⚠ adresse …/exec du projet HURELLE PORTAIL CLIENT
+  var API = 'COLLER_ICI_L_ADRESSE_EXEC_DU_PORTAIL';        // ⚠ adresse …/exec du projet HURELLE PORTAIL CLIENT
   var JETON = ((/[?&]t=([A-Za-z0-9]+)/.exec(location.search) || [])[1] || '').slice(0, 64);
   var CDN = 'https://cdnjs.cloudflare.com/ajax/libs/';
   var LIB = { pdflib:CDN + 'pdf-lib/1.17.1/pdf-lib.min.js', pdfjs:CDN + 'pdf.js/3.11.174/pdf.min.js', worker:CDN + 'pdf.js/3.11.174/pdf.worker.min.js' };
@@ -391,25 +391,37 @@
   }
   // 4) Merci + copie des documents signés (fabriquée dans le téléphone, rien n'est téléchargé depuis le serveur)
   function fini(res, png, oppo){
-    var D = S.D, v = D.v;
-    var h = '<div class="pc-ok"><h1 style="color:#0d652d;">Merci, vos documents sont signés</h1>Signature enregistrée le <b>' + E(res.date) + '</b> à <b>' + E(res.heure) + '</b>. ' + E(S.vendeur || 'Votre vendeur') + ' est prévenu.</div>'
-      + '<div class="pc-bloc" id="pcCopie"><div class="pc-note">Préparation de votre copie…</div></div>'
-      + '<div class="pc-pied">Vous pouvez fermer cette page. Ce lien ne peut plus servir.</div>';
+    var D = S.D, v = D.v, qui = S.vendeur || 'Votre vendeur';
+    var h = '<div class="pc-ok"><h1 style="color:#0d652d;">Merci, vos documents sont signés</h1>Signature enregistrée le <b>' + E(res.date) + '</b> à <b>' + E(res.heure) + '</b>.</div>'
+      + '<div class="pc-info" id="pcEnvoi"><b>Envoi de vos documents signés au garage…</b><br>Gardez cette page ouverte encore quelques secondes.</div>'
+      + '<div class="pc-bloc" id="pcCopie"><div class="pc-note">Préparation de votre copie…</div></div>';
     page(h, v.nom);
-    function prevenir(b64){ try { srv('portailCopie', [JETON, S.nom, b64 || '']).catch(function(){}); } catch (e) {} }   // mail au vendeur, avec ou sans pièce jointe
-    function sans(){ prevenir(''); var z = document.getElementById('pcCopie'); if (z) z.innerHTML = '<div class="pc-note">Votre exemplaire signé vous sera remis par ' + E(S.vendeur || 'votre vendeur') + '.</div>'; }
+    function b64(u){ var s = '', pas = 0x8000; for (var i = 0; i < u.length; i += pas) s += String.fromCharCode.apply(null, u.subarray(i, i + pas)); return btoa(s); }
+    // Fin de l'envoi au garage : le client peut fermer la page
+    function termine(ok){
+      var z = document.getElementById('pcEnvoi'); if (!z) return;
+      z.className = ok ? 'pc-ok' : 'pc-info';
+      z.innerHTML = ok ? '<b>Vos documents signés sont bien transmis au garage.</b> ' + E(qui) + ' est prévenu.<br>Vous pouvez fermer cette page. Ce lien ne peut plus servir.'
+                       : '<b>Votre signature est bien enregistrée.</b> ' + E(qui) + ' finalisera vos documents.<br>Vous pouvez fermer cette page. Ce lien ne peut plus servir.';
+    }
+    // Mail au vendeur + rangement automatique : le PDF « tout imprimer » et les documents signés un par un (ou rien s'ils n'ont pas pu être fabriqués)
+    var parti = false;
+    function prevenir(pdf, docs){
+      if (parti) return; parti = true;
+      try { srv('portailCopie', [JETON, S.nom, pdf || '', docs || []]).then(function(r){ termine(!!(r && r.ok)); }, function(){ termine(false); }); } catch (e) { termine(false); }
+    }
+    function sans(){ prevenir('', []); var z = document.getElementById('pcCopie'); if (z) z.innerHTML = '<div class="pc-note">Votre exemplaire signé vous sera remis par ' + E(S.vendeur || 'votre vendeur') + '.</div>'; }
     if (typeof PDFLib === 'undefined'){ sans(); return; }
     D.dateVente = res.date; D.heureVente = res.heure; D.opposition = !!oppo;
+    var signes = [];
     remplirTous(D, { signature:deB64(png), trace:'Signé à distance le ' + res.date + ' à ' + res.heure + ' par ' + (D.a.nom || '') }).then(function(docs){
+      signes = docs.map(function(d){ return { et:d.et, pdf:b64(d.bytes) }; });
       return fusionner(docs);
     }).then(function(t){
-      fetch(t.url).then(function(r){ return r.arrayBuffer(); }).then(function(ab){
-        var u = new Uint8Array(ab), s = '', pas = 0x8000; for (var i = 0; i < u.length; i += pas) s += String.fromCharCode.apply(null, u.subarray(i, i + pas));
-        prevenir(btoa(s));
-      }, function(){ prevenir(''); });
+      fetch(t.url).then(function(r){ return r.arrayBuffer(); }).then(function(ab){ prevenir(b64(new Uint8Array(ab)), signes); }, function(){ prevenir('', signes); });
       var z = document.getElementById('pcCopie'); if (!z) return;
       z.innerHTML = '<a class="pc-btn" id="pcCopieLien" href="' + t.url + '" download="' + E(t.nom) + '" target="_blank" rel="noopener">Garder une copie de mes documents (' + t.pages + ' pages)</a>'
-        + '<div class="pc-note">Certificat de cession, mandat et demande de certificat, signés. ' + E(S.vendeur || 'Votre vendeur') + ' vous remettra aussi votre exemplaire.</div>';
+        + '<div class="pc-note">Certificat de cession, mandat et demande de certificat, signés. ' + E(qui) + ' vous remettra aussi votre exemplaire.</div>';
     }).catch(sans);
   }
   window._pcEtat = S;                                                      // pour les essais
