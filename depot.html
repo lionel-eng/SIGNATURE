@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<!-- ════════════════════════════════════════════════════════════════════════
+     depot.html — v1.1 — 16/11/2026 (annonce du mail d'activation, jusqu'à 72 h) — DÉPÔT DES PIÈCES DU CLIENT POUR LA CARTE GRISE (page hébergée hors de Google, à côté d'index.html)
+     C'est la page du QR CODE UNIQUE (le même pour tous les clients, à mettre sur le bon de commande).
+     Le client tape son immatriculation → si une commande est en cours (véhicule vendu, pas encore livré), il dépose ses pièces :
+       pièce d'identité (carte d'identité recto + verso, ou passeport 1 page) · permis de conduire recto + verso ·
+       justificatif de domicile · assurance du véhicule · et, au besoin, cotitulaire, hébergement, Kbis.
+     Va avec PortailClient.gs v1.8 (depotOuvrir, depotEnvoyer) et DepotClientApp.gs v1.1 (réglages publiés par l'appli).
+     CETTE PAGE NE CONTIENT ET N'AFFICHE AUCUNE DONNÉE du dossier : ni nom, ni véhicule, ni document. Elle sait seulement, pour chaque
+       pièce, si elle est « reçue ». Les photos sont réduites dans le téléphone avant l'envoi (2 200 points au plus, JPEG).
+     ⚠ UNE SEULE LIGNE À RÉGLER : API = l'adresse …/exec du déploiement du projet HURELLE PORTAIL CLIENT (la même que dans index.html).
+     Lien direct possible : depot.html?i=AB-123-CD (l'immatriculation est pré-remplie).
+     ════════════════════════════════════════════════════════════════════════ -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Vos documents pour la carte grise</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#f1f3f4;color:#202124;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;font-size:16px;line-height:1.45}
+  .dp{max-width:640px;margin:0 auto;padding:14px 14px 70px}
+  h1{font-size:21px;margin:0 0 8px;line-height:1.25} h2{font-size:16px;margin:0 0 4px}
+  .dp-bloc{background:#fff;border:1px solid #dadce0;border-radius:12px;padding:14px;margin-bottom:12px}
+  .dp-bloc.ok{border-color:#b7dfc2;background:#f3faf5}
+  .dp-note{font-size:13.5px;color:#5f6368;margin:6px 0 0}
+  .dp-alerte{border:1px solid #f4c7c3;background:#fce8e6;color:#a50e0e;border-radius:12px;padding:12px 14px;margin:10px 0 0;font-size:14.5px}
+  .dp-merci{border:1px solid #b7dfc2;background:#e6f4ea;color:#0d652d;border-radius:12px;padding:14px;margin-bottom:12px}
+  input[type=text]{width:100%;font-size:22px;letter-spacing:1px;text-transform:uppercase;padding:12px;border:1px solid #9aa0a6;border-radius:10px;background:#fff;text-align:center}
+  .dp-btn{display:block;width:100%;margin-top:10px;border:0;border-radius:12px;padding:15px;font-size:17px;font-weight:700;background:#188038;color:#fff;cursor:pointer;text-align:center}
+  .dp-btn[disabled]{background:#dadce0;color:#5f6368;cursor:default}
+  .dp-etat{float:right;font-size:13px;font-weight:700;border-radius:8px;padding:2px 8px;background:#fce8e6;color:#a50e0e}
+  .dp-etat.ok{background:#e6f4ea;color:#0d652d} .dp-etat.fac{background:#f1f3f4;color:#5f6368}
+  .dp-choix{display:flex;gap:8px;margin:10px 0 2px} .dp-choix label{flex:1;border:1px solid #dadce0;border-radius:10px;padding:9px 8px;text-align:center;font-size:14.5px;cursor:pointer;background:#fff}
+  .dp-choix input{display:none} .dp-choix label.actif{border-color:#1a73e8;background:#e8f0fe;color:#1a73e8;font-weight:700}
+  .dp-case{display:flex;align-items:center;gap:10px;border-top:1px solid #f1f3f4;padding:10px 0 0;margin-top:10px}
+  .dp-case .lib{flex:1;min-width:0;font-size:14.5px} .dp-case .lib small{display:block;color:#5f6368;font-size:12.5px}
+  .dp-fichier{position:relative;overflow:hidden;display:inline-block;border:1px solid #1a73e8;color:#1a73e8;background:#fff;border-radius:10px;padding:10px 12px;font-size:14.5px;font-weight:700;cursor:pointer;white-space:nowrap}
+  .dp-fichier.fait{border-color:#188038;color:#0d652d;background:#e6f4ea} .dp-fichier.attente{border-color:#dadce0;color:#5f6368}
+  .dp-fichier input{position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:60px}
+  .dp-barre{height:8px;border-radius:4px;background:#dadce0;overflow:hidden;margin:8px 0 2px} .dp-barre i{display:block;height:100%;background:#188038;width:0}
+  details.dp-bloc summary{cursor:pointer;font-weight:700} details.dp-bloc .dp-piece{border-top:1px solid #f1f3f4;margin-top:12px;padding-top:12px}
+  .dp-pied{font-size:12px;color:#5f6368;margin-top:16px;line-height:1.4}
+</style>
+</head>
+<body>
+<div class="dp" id="dp"><div class="dp-bloc">Chargement…</div></div>
+<script>
+(function(){
+  var API = 'https://script.google.com/macros/s/AKfycbz7hlJvBbmgROyEwacZMM3mkxKYA5XFk1qR51SjWrKKjqhe75qklsExjTQt9Q1FmVSf/exec';        // ⚠ adresse …/exec du projet HURELLE PORTAIL CLIENT
+  var MAX_COTE = 2200, QUALITE = 0.85, MAX_PDF = 9 * 1024 * 1024;
+  var S = { immat:'', pieces:[], choix:{}, envois:{}, pb:{} };
+
+  function E(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return '&#' + c.charCodeAt(0) + ';'; }); }
+  function el(id){ return document.getElementById(id); }
+  var FCT = { depotOuvrir:'depot_ouvrir', depotEnvoyer:'depot_envoyer' };
+  function srv(nom, args){
+    if (!/^https:\/\//.test(API)) return Promise.reject(new Error('adresse du portail non réglée'));
+    return fetch(API, { method:'POST', credentials:'omit', redirect:'follow', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body:JSON.stringify({ f:FCT[nom], a:args || [] }) })
+      .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  }
+  var PANNE = 'Service momentanément indisponible. Vérifiez votre connexion et réessayez.';
+  function page(html){ el('dp').innerHTML = html; }
+
+  // ── 1) L'immatriculation ──
+  function ecranImmat(msg, valeur){
+    page('<div class="dp-bloc"><h1>Vos documents pour la carte grise</h1>'
+      + '<p style="margin:0 0 12px;">Tapez l\'<b>immatriculation</b> du véhicule que vous achetez (elle figure sur votre bon de commande).</p>'
+      + '<input type="text" id="dpImmat" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="AB-123-CD" value="' + E(valeur || '') + '">'
+      + (msg ? '<div class="dp-alerte">' + E(msg) + '</div>' : '')
+      + '<button class="dp-btn" id="dpGo">Continuer</button></div>'
+      + '<div class="dp-pied" style="margin-bottom:10px;"><b>Votre espace s\'ouvre à la réception du mail d\'activation</b>, qui peut prendre jusqu\'à 72 h après la signature du bon de commande. Chargez alors ici les pièces nécessaires à l\'élaboration de votre carte grise.</div>'
+      + '<div class="dp-pied">Vos documents servent uniquement à établir la carte grise de votre véhicule. Ils sont transmis directement à votre vendeur.</div>');
+    var i = el('dpImmat'), b = el('dpGo');
+    function go(){ var v = i.value.replace(/[^A-Za-z0-9]/g, ''); if (v.length < 4){ i.focus(); return; } b.disabled = true; b.textContent = 'Recherche…'; ouvrir(i.value.trim().toUpperCase()); }
+    b.onclick = go; i.onkeydown = function(e){ if (e.key === 'Enter') go(); };
+  }
+  function ouvrir(immat){
+    srv('depotOuvrir', [immat]).then(function(r){
+      if (!r || !r.ok){ ecranImmat((r && r.message) || PANNE, immat); return; }
+      S.immat = r.immat || immat; S.pieces = r.pieces || []; S.choix = {}; S.envois = {}; S.pb = {};
+      S.pieces.forEach(function(p){ p.recu = p.recu || { n:0 }; if (p.faces === 'CNI_OU_PASSEPORT') S.choix[p.et] = p.recu.PASSEPORT && !p.recu.RECTO ? 'PASSEPORT' : 'CNI'; });
+      ecranPieces();
+    }, function(){ ecranImmat(PANNE, immat); });
+  }
+
+  // ── 2) Les pièces ──
+  // Les cases d'une pièce : [face, libellé, précision]
+  function cases(p){
+    if (p.faces === 'RECTO_VERSO') return [['RECTO', 'Recto', 'le côté avec la photo'], ['VERSO', 'Verso', 'l\'autre côté']];
+    if (p.faces === 'CNI_OU_PASSEPORT') return S.choix[p.et] === 'PASSEPORT' ? [['PASSEPORT', 'Passeport', 'la page avec votre photo']]
+                                                                             : [['RECTO', 'Carte d\'identité — recto', 'le côté avec la photo'], ['VERSO', 'Carte d\'identité — verso', 'l\'autre côté']];
+    return [['', p.recu.n ? 'Ajouter une page' : 'Le document', 'photo ou fichier PDF']];
+  }
+  function recue(p, face){ return face === '' ? p.recu.n > 0 : !!p.recu[face]; }
+  function complete(p){
+    if (p.faces === 'RECTO_VERSO') return !!(p.recu.RECTO && p.recu.VERSO);
+    if (p.faces === 'CNI_OU_PASSEPORT') return !!((p.recu.RECTO && p.recu.VERSO) || p.recu.PASSEPORT);
+    return p.recu.n > 0;
+  }
+  function htmlPiece(p){
+    var ok = complete(p), h = '<div class="dp-piece" id="dpP_' + E(p.et) + '"><span class="dp-etat ' + (ok ? 'ok' : (p.exige ? '' : 'fac')) + '">' + (ok ? '✓ Reçu' : (p.exige ? 'À fournir' : 'Si besoin')) + '</span><h2>' + E(p.lib) + '</h2>';
+    if (p.faces === 'CNI_OU_PASSEPORT') h += '<div class="dp-choix"><label class="' + (S.choix[p.et] !== 'PASSEPORT' ? 'actif' : '') + '" onclick="dpChoix(\'' + E(p.et) + '\',\'CNI\')">Carte d\'identité</label>'
+      + '<label class="' + (S.choix[p.et] === 'PASSEPORT' ? 'actif' : '') + '" onclick="dpChoix(\'' + E(p.et) + '\',\'PASSEPORT\')">Passeport</label></div>';
+    cases(p).forEach(function(c){
+      var cle = p.et + '|' + c[0], enc = !!S.envois[cle], fait = recue(p, c[0]) && c[0] !== '';
+      h += '<div class="dp-case"><div class="lib">' + E(c[1]) + '<small>' + E(c[2]) + '</small></div>'
+        + '<label class="dp-fichier' + (enc ? ' attente' : (fait ? ' fait' : '')) + '">' + (enc ? '⏳ Envoi…' : (fait ? '✓ Reçu · remplacer' : '📷 Photo ou fichier'))
+        + (enc ? '' : '<input type="file" accept="image/*,application/pdf" onchange="dpFichier(this,\'' + E(p.et) + '\',\'' + c[0] + '\')">') + '</label></div>';
+      if (S.pb[cle]) h += '<div class="dp-alerte">' + E(S.pb[cle]) + '</div>';
+    });
+    if (p.faces === '' && p.recu.n) h += '<div class="dp-note">' + p.recu.n + ' fichier' + (p.recu.n > 1 ? 's' : '') + ' reçu' + (p.recu.n > 1 ? 's' : '') + '.</div>';
+    return h + '</div>';
+  }
+  function ecranPieces(){
+    var oblig = S.pieces.filter(function(p){ return p.exige; }), fac = S.pieces.filter(function(p){ return !p.exige; }), nb = oblig.filter(complete).length, tout = oblig.length && nb === oblig.length;
+    var y = window.scrollY || 0, ouvert = (el('dpAutres') || {}).open;
+    var h = (tout ? '<div class="dp-merci"><h1 style="color:#0d652d;">Merci, tout est reçu</h1>Vos documents sont transmis à votre vendeur. Vous pouvez fermer cette page.</div>' : '')
+      + '<div class="dp-bloc"><h1>Vos documents pour la carte grise</h1>Véhicule <b>' + E(S.immat) + '</b> · <a href="#" onclick="dpChanger();return false;">changer</a>'
+      + '<div class="dp-barre"><i style="width:' + (oblig.length ? Math.round(100 * nb / oblig.length) : 0) + '%"></i></div><div class="dp-note" id="dpCompte">' + nb + ' document' + (nb > 1 ? 's' : '') + ' sur ' + oblig.length + ' reçu' + (nb > 1 ? 's' : '')
+      + ' — à déposer <b>avant la livraison</b>. Prenez chaque document en photo, bien à plat, en entier et lisible.</div></div>';
+    oblig.forEach(function(p){ h += '<div class="dp-bloc' + (complete(p) ? ' ok' : '') + '">' + htmlPiece(p) + '</div>'; });
+    if (fac.length) h += '<details class="dp-bloc" id="dpAutres"' + (ouvert ? ' open' : '') + '><summary>Autre situation : cotitulaire, personne hébergée, société</summary>'
+      + '<div class="dp-note">À remplir seulement si votre vendeur vous l\'a demandé.</div>' + fac.map(htmlPiece).join('') + '</details>';
+    h += '<div class="dp-pied">Vous pouvez revenir sur cette page plus tard avec la même immatriculation : ce qui est déjà reçu reste noté. Vos documents ne sont pas affichés ici ; ils servent uniquement à établir la carte grise de votre véhicule.</div>';
+    page(h); try { window.scrollTo(0, y); } catch (e) {}
+  }
+  window.dpChoix = function(et, c){ S.choix[et] = c; ecranPieces(); };
+  window.dpChanger = function(){ ecranImmat('', ''); };
+
+  // ── 3) Un fichier : photo réduite en JPEG dans le téléphone, PDF envoyé tel quel ──
+  function b64(u){ var s = '', pas = 0x8000; for (var i = 0; i < u.length; i += pas) s += String.fromCharCode.apply(null, u.subarray(i, i + pas)); return btoa(s); }
+  function lire(f){ return new Promise(function(ok, ko){ var r = new FileReader(); r.onload = function(){ ok(new Uint8Array(r.result)); }; r.onerror = function(){ ko(new Error('lecture')); }; r.readAsArrayBuffer(f); }); }
+  function preparer(f){
+    var nom = String(f.name || '').toLowerCase(), pdf = f.type === 'application/pdf' || /\.pdf$/.test(nom);
+    if (pdf){
+      if (f.size > MAX_PDF) return Promise.reject(new Error('Ce PDF est trop lourd (9 Mo au plus). Prenez plutôt le document en photo.'));
+      return lire(f).then(function(u){ return { type:'pdf', b64:b64(u) }; });
+    }
+    return new Promise(function(ok, ko){
+      var url = URL.createObjectURL(f), img = new Image();
+      img.onload = function(){
+        try {
+          var e = Math.min(1, MAX_COTE / Math.max(img.naturalWidth, img.naturalHeight)), c = document.createElement('canvas');
+          c.width = Math.max(1, Math.round(img.naturalWidth * e)); c.height = Math.max(1, Math.round(img.naturalHeight * e));
+          var x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height);
+          var d = c.toDataURL('image/jpeg', QUALITE).split('base64,')[1] || ''; URL.revokeObjectURL(url);
+          if (d.length < 200) ko(new Error('Photo illisible. Reprenez-la.')); else ok({ type:'jpg', b64:d });
+        } catch (er) { URL.revokeObjectURL(url); ko(new Error('Photo illisible. Reprenez-la.')); }
+      };
+      img.onerror = function(){ URL.revokeObjectURL(url); ko(new Error('Ce fichier n\'est pas lu par votre téléphone. Prenez le document en photo, ou envoyez un PDF.')); };
+      img.src = url;
+    });
+  }
+  window.dpFichier = function(input, et, face){
+    var f = input.files && input.files[0]; if (!f) return;
+    var cle = et + '|' + face, p = S.pieces.filter(function(x){ return x.et === et; })[0]; if (!p || S.envois[cle]) return;
+    S.envois[cle] = true; delete S.pb[cle]; ecranPieces();
+    function fin(msg){ delete S.envois[cle]; if (msg) S.pb[cle] = msg; ecranPieces(); }
+    preparer(f).then(function(x){ return srv('depotEnvoyer', [S.immat, et, face, x.type, x.b64]); }).then(function(r){
+      if (!r || !r.ok){ fin((r && r.message) || PANNE); return; }
+      p.recu.n = (p.recu.n || 0) + 1; if (face) p.recu[face] = true; fin('');
+    }, function(e){ fin(/^(Ce |Photo )/.test(String(e && e.message)) ? e.message : 'Envoi interrompu : vérifiez votre connexion et recommencez.'); });
+  };
+  window._dpEtat = S;                                                      // pour les essais
+
+  var pre = ((/[?&]i=([A-Za-z0-9-]{4,12})/.exec(location.search) || [])[1] || '').toUpperCase();
+  ecranImmat('', pre);
+})();
+</script>
+</body>
+</html>
