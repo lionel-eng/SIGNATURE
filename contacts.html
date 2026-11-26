@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <!-- ════════════════════════════════════════════════════════════════════════
-     contacts.html — v1.0 — 26/11/2026 — APPORT DE CONTACTS PAR LES CONSEILLERS CLIENTS DU GROUPE (BLOC v152)
+     contacts.html — v1.1 — 26/11/2026 (classement : l'équipe de référence à battre et le champagne ; va avec ContactsGuichet.gs v1.2) · v1.0 — APPORT DE CONTACTS PAR LES CONSEILLERS CLIENTS DU GROUPE (BLOC v152)
      Page hébergée hors de Google (à côté de depot.html), ouverte par UN SEUL lien pour tout le groupe : …/contacts.html?k=LA_CLE
      Le conseiller choisit son site puis son nom UNE fois (gardé sur le téléphone), puis envoie un contact : nom, téléphone,
        ce que veut le client (vendre, acheter, les deux), véhicule, budget, photos prises ou choisies, note.
      Il retrouve « Mes contacts » (état, suiveur, relance) et le classement par entité, mis à jour à chaque ouverture et chaque minute.
-     Va avec ContactsGuichet.gs v1.0 (projet HURELLE CONTACTS).
+     Va avec ContactsGuichet.gs v1.2 (projet HURELLE CONTACTS).
      CETTE PAGE N'AFFICHE JAMAIS le téléphone ni le mail d'un client déjà envoyé. Les photos sont réduites dans le téléphone (1 600 points, JPEG).
      ⚠ UNE SEULE LIGNE À RÉGLER : API = l'adresse …/exec du déploiement du projet HURELLE CONTACTS.
      Raccourci sur le téléphone : « Ajouter à l'écran d'accueil » (icône = contacts-icone.png, posée à côté de cette page).
@@ -291,9 +291,11 @@
     var R = S.suivi, P = (R && R.pts) || (S.cfg && S.cfg.pts) || { c:1, r:10, v:10 };
     if (!R || !R.classement || !R.classement.length){ page('<div class="carte">' + (S.majPb ? '<div class="alerte" style="margin-top:0;">' + E(S.majPb) + '</div>' : 'Chargement du classement…') + '</div>'); return; }
     var max = Math.max.apply(null, R.classement.map(function(x){ return x.pts; }).concat([1]));
-    var h = '<div class="carte"><h1>Classement par entité</h1><p class="note" style="margin-bottom:8px;">Contact envoyé : ' + P.c + ' point · rachat fait : ' + P.r + ' points · vente faite : ' + P.v + ' points. Les points se cumulent' + (S.cfg && S.cfg.fin ? ' jusqu\'au ' + E(S.cfg.fin) : '') + '.</p>';
+    var ref = R.ref ? R.classement.filter(function(x){ return x.s === R.ref; })[0] : null;
+    var h = (ref ? '<div class="carte"><h2>🎯 L\'équipe à battre : ' + E(ref.s) + '</h2><p class="note" style="margin:0;">Toute équipe qui fait <b>au moins autant de points</b> que lui (' + ref.pts + ' pt' + (ref.pts > 1 ? 's' : '') + ' aujourd\'hui) gagne <b>une bouteille de champagne par personne</b> 🍾. Il faut avoir envoyé au moins un contact.</p></div>' : '')
+      + '<div class="carte"><h1>Classement par entité</h1><p class="note" style="margin-bottom:8px;">Contact envoyé : ' + P.c + ' point · rachat fait : ' + P.r + ' points · vente faite : ' + P.v + ' points. Les points se cumulent' + (S.cfg && S.cfg.fin ? ' jusqu\'au ' + E(S.cfg.fin) : '') + '.</p>';
     R.classement.forEach(function(x, i){
-      h += '<div class="rang' + (x.s === S.moi.site ? ' moi' : '') + '"><span class="pts">' + (i + 1) + '</span><b>' + E(x.s) + '</b><span class="pts">' + x.pts + ' pt' + (x.pts > 1 ? 's' : '') + '</span>'
+      h += '<div class="rang' + (x.s === S.moi.site ? ' moi' : '') + '"><span class="pts">' + (i + 1) + '</span><b>' + E(x.s) + (ref && x.s === ref.s ? ' 🎯' : (ref && x.n > 0 && x.pts >= ref.pts ? ' 🍾' : '')) + '</b><span class="pts">' + x.pts + ' pt' + (x.pts > 1 ? 's' : '') + '</span>'
         + '<div class="barre"><i style="width:' + Math.round(100 * x.pts / max) + '%"></i></div><span></span><span class="petit" style="grid-column:2 / 4;">' + x.n + ' contact' + (x.n > 1 ? 's' : '') + ' · ' + x.rachats + ' rachat' + (x.rachats > 1 ? 's' : '') + ' · ' + x.ventes + ' vente' + (x.ventes > 1 ? 's' : '') + '</span></div>';
     });
     page(h + '</div>' + (R.maj ? '<p class="note">Mis à jour à ' + E(R.maj) + '.</p>' : ''));
@@ -330,4 +332,4 @@
 </script>
 </body>
 </html>
-<!-- ══════ FIN contacts.html v1.0 ══════ -->
+<!-- ══════ FIN contacts.html v1.1 ══════ -->
