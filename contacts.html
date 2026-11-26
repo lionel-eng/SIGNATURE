@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<!-- ════════════════════════════════════════════════════════════════════════
+     contacts.html — v1.0 — 26/11/2026 — APPORT DE CONTACTS PAR LES CONSEILLERS CLIENTS DU GROUPE (BLOC v152)
+     Page hébergée hors de Google (à côté de depot.html), ouverte par UN SEUL lien pour tout le groupe : …/contacts.html?k=LA_CLE
+     Le conseiller choisit son site puis son nom UNE fois (gardé sur le téléphone), puis envoie un contact : nom, téléphone,
+       ce que veut le client (vendre, acheter, les deux), véhicule, budget, photos prises ou choisies, note.
+     Il retrouve « Mes contacts » (état, suiveur, relance) et le classement par entité, mis à jour à chaque ouverture et chaque minute.
+     Va avec ContactsGuichet.gs v1.0 (projet HURELLE CONTACTS).
+     CETTE PAGE N'AFFICHE JAMAIS le téléphone ni le mail d'un client déjà envoyé. Les photos sont réduites dans le téléphone (1 600 points, JPEG).
+     ⚠ UNE SEULE LIGNE À RÉGLER : API = l'adresse …/exec du déploiement du projet HURELLE CONTACTS.
+     Raccourci sur le téléphone : « Ajouter à l'écran d'accueil » (icône = contacts-icone.png, posée à côté de cette page).
+     ════════════════════════════════════════════════════════════════════════ -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#111111">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Contacts Hurelle">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="apple-touch-icon" href="contacts-icone.png">
+<link rel="icon" type="image/png" href="contacts-icone.png">
+<title>Contacts Hurelle</title>
+<style>
+  *{box-sizing:border-box}
+  :root{--fond:#f4f4f2;--carte:#fff;--encre:#111;--gris:#5f5f5b;--trait:#d4d4d0;--doux:#ecece8;--ko:#b3261e;--kof:#fce8e6;--ok:#0d652d;--okf:#e6f4ea}
+  html,body{margin:0;padding:0;background:var(--fond);color:var(--encre);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;font-size:16px;line-height:1.4;-webkit-text-size-adjust:100%}
+  .tete{background:#111;color:#fff;padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;position:sticky;top:0;z-index:5}
+  .tete .l1{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .logo{font-family:"Arial Narrow","Helvetica Neue",Arial,sans-serif;font-weight:800;font-style:italic;font-size:24px;letter-spacing:2px}
+  .tete small{font-size:13px;opacity:.85}
+  .moi{font-size:13.5px;margin-top:4px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .moi a{color:#fff;opacity:.8}
+  .onglets{display:flex;gap:6px;margin-top:10px}
+  .onglets button{flex:1;font:inherit;font-size:14px;font-weight:700;border:1px solid #fff;background:#111;color:#fff;border-radius:999px;padding:8px 4px;cursor:pointer}
+  .onglets button[aria-pressed=true]{background:#fff;color:#111}
+  .page{max-width:640px;margin:0 auto;padding:14px 16px calc(60px + env(safe-area-inset-bottom,0px))}
+  .carte{background:var(--carte);border:1px solid var(--trait);border-radius:14px;padding:14px;margin-bottom:12px}
+  h1{font-size:20px;margin:0 0 6px;line-height:1.2} h2{font-size:16px;margin:0 0 6px}
+  .note{font-size:13.5px;color:var(--gris);margin:4px 0 0}
+  label.t{display:block;font-size:13px;font-weight:700;color:var(--gris);margin:12px 0 4px}
+  input[type=text],input[type=tel],input[type=email],select,textarea{font:inherit;width:100%;border:1px solid #9a9a96;border-radius:10px;padding:12px;background:#fff;color:#111}
+  textarea{min-height:76px;resize:vertical}
+  input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px solid #111;outline-offset:2px}
+  .deux{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0 10px}
+  .choix{display:flex;gap:8px;flex-wrap:wrap}
+  .choix button{flex:1 1 140px;font:inherit;font-weight:700;border:2px solid var(--trait);background:#fff;color:#111;border-radius:12px;padding:13px 10px;cursor:pointer;text-align:center}
+  .choix button[aria-pressed=true]{border-color:#111;background:#111;color:#fff}
+  .gros{display:block;width:100%;font:inherit;font-size:17px;font-weight:800;border:0;border-radius:12px;padding:16px;background:#111;color:#fff;cursor:pointer;margin-top:14px}
+  .gros[disabled]{background:var(--trait);color:var(--gris);cursor:default}
+  .second{font:inherit;font-size:14px;font-weight:700;border:1px solid #111;background:#fff;color:#111;border-radius:10px;padding:9px 12px;cursor:pointer}
+  .second[disabled]{border-color:var(--trait);color:var(--gris);cursor:default}
+  .fichier{position:relative;overflow:hidden;flex:1 1 140px;border:2px dashed #7a7a76;background:var(--doux);border-radius:12px;padding:13px 10px;font-weight:700;text-align:center;cursor:pointer}
+  .fichier input{position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:60px}
+  .vignettes{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .vignettes div{position:relative;width:76px;height:76px;border-radius:10px;overflow:hidden;border:1px solid var(--trait)}
+  .vignettes img{width:100%;height:100%;object-fit:cover;display:block}
+  .vignettes button{position:absolute;right:2px;top:2px;width:26px;height:26px;border-radius:50%;border:0;background:#111;color:#fff;font-weight:800;cursor:pointer;line-height:1}
+  .case{display:flex;gap:10px;align-items:flex-start;margin-top:14px;font-size:14.5px}
+  .case input{width:22px;height:22px;flex:none;margin-top:1px;accent-color:#111}
+  .alerte{border:1px solid #f0b8b3;background:var(--kof);color:var(--ko);border-radius:12px;padding:11px 13px;margin-top:12px;font-size:14.5px;font-weight:600}
+  .merci{border:1px solid #b7dfc2;background:var(--okf);color:var(--ok);border-radius:12px;padding:12px 14px;margin-bottom:12px;font-weight:700}
+  .ligne{border-top:1px solid var(--doux);padding:12px 0;min-width:0}
+  .ligne:first-of-type{border-top:0;padding-top:4px}
+  .ligne .l1{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+  .ligne b{overflow-wrap:anywhere}
+  .petit{font-size:13px;color:var(--gris);overflow-wrap:anywhere;margin-top:2px}
+  .etat{display:inline-block;font-size:12.5px;font-weight:700;border-radius:999px;padding:3px 10px;border:1px solid #111;background:#fff;color:#111;white-space:nowrap}
+  .etat.plein{background:#111;color:#fff} .etat.gris{border-color:var(--trait);background:var(--doux);color:var(--gris)}
+  .suiveur{margin-top:6px;font-size:14px} .suiveur b{user-select:all}
+  .rang{display:grid;grid-template-columns:26px 1fr auto;gap:2px 8px;align-items:center;padding:9px 0;border-top:1px solid var(--doux)}
+  .rang:first-of-type{border-top:0}
+  .rang .barre{grid-column:2 / 4;height:6px;border-radius:3px;background:var(--doux);overflow:hidden}
+  .rang .barre i{display:block;height:100%;background:#111}
+  .rang.moi b{text-decoration:underline}
+  .pts{font-variant-numeric:tabular-nums;font-weight:800}
+  .aide{border:1px dashed #7a7a76;border-radius:12px;padding:11px 13px;margin-bottom:12px;font-size:14px;display:flex;gap:10px;align-items:flex-start}
+  .aide button{flex:none;border:0;background:none;font-size:20px;line-height:1;cursor:pointer;color:var(--gris);padding:0 4px}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="tete" id="tete" hidden>
+  <div class="l1"><span class="logo">HURELLE</span><small>Contacts</small></div>
+  <div class="moi"><span id="moiTxt"></span><a href="#" id="moiChanger">Ce n'est pas moi</a></div>
+  <div class="onglets"><button id="ongN" aria-pressed="true">Nouveau</button><button id="ongM" aria-pressed="false">Mes contacts</button><button id="ongC" aria-pressed="false">Classement</button></div>
+</div>
+<div class="page" id="page"><div class="carte">Chargement…</div></div>
+<script>
+(function(){
+  var API = 'https://script.google.com/macros/s/AKfycbyeIwOT4OpxHlDQOk5pST-z2XUMD81zhfngqwX3ONxx-6Y26KSRZUvdDc_hzuZFN3pl/exec';        // ⚠ adresse …/exec du projet HURELLE CONTACTS
+  var MAX_COTE = 1600, QUALITE = 0.8, MAX_PHOTOS = 8;
+  var OCCASIONS = ['Passage atelier', 'Révision', 'Carrosserie / sinistre', 'Contrôle technique', 'Dépannage', 'Pneus', 'Autre'];
+  var VEUT = { VENDRE:'Vendre son véhicule', ACHETER:'Acheter un véhicule', LES_DEUX:'Vendre et acheter' };
+  var PANNE = 'Service momentanément indisponible. Vérifiez votre connexion et réessayez.';
+  var S = { cle:'', cfg:null, moi:null, onglet:'N', f:null, photos:[], envoi:null, pb:'', merci:'', suivi:null, majPb:'', confirme:'', relance:{} };
+
+  function E(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return '&#' + c.charCodeAt(0) + ';'; }); }
+  function el(id){ return document.getElementById(id); }
+  function lire(k){ try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } }
+  function ecrire(k, v){ try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  function srv(f, args){
+    if (!/^https:\/\//.test(API)) return Promise.reject(new Error('adresse du guichet non réglée'));
+    return fetch(API, { method:'POST', credentials:'omit', redirect:'follow', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body:JSON.stringify({ f:f, a:args || [] }) })
+      .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  }
+  function page(html){ el('page').innerHTML = html; }
+  function vide(){ return { veut:'', nom:'', tel:'', mail:'', immat:'', km:'', budget:'', ajout:'', occasion:'', note:'', accord:true, u:'' }; }
+  function hasard(n){ var a = 'abcdefghijkmnopqrstuvwxyz23456789', s = ''; for (var i = 0; i < n; i++) s += a.charAt(Math.floor(Math.random() * a.length)); return s; }
+
+  // ── 0) La clé du lien ──
+  function sansCle(msg){ el('tete').hidden = true; page('<div class="carte"><h1>Contacts Hurelle</h1><div class="alerte">' + E(msg || 'Ce lien n\'est pas complet. Ouvrez le lien que Hurelle Automobiles vous a envoyé.') + '</div></div>'); }
+
+  // ── 1) Qui êtes-vous ? (une seule fois, gardé sur le téléphone) ──
+  function ecranSite(){
+    el('tete').hidden = true;
+    var h = '<div class="carte"><h1>Contacts Hurelle</h1><p class="note" style="margin-bottom:12px;">Envoyez à Hurelle Automobiles un client qui veut vendre ou acheter un véhicule. Dites-nous d\'abord où vous travaillez : on ne vous le redemandera pas.</p><h2>Votre site</h2><div class="choix">';
+    S.cfg.sites.forEach(function(s, i){ h += '<button onclick="ctcSite(' + i + ')">' + E(s.s) + '</button>'; });
+    page(h + '</div></div>');
+  }
+  window.ctcSite = function(i){
+    var s = S.cfg.sites[i]; if (!s) return;
+    var h = '<div class="carte"><h1>' + E(s.s) + '</h1><h2>Qui êtes-vous ?</h2><div class="choix">';
+    s.c.forEach(function(n, j){ h += '<button onclick="ctcQui(' + i + ',' + j + ')">' + E(n) + '</button>'; });
+    h += '</div><label class="t" for="quiLibre">' + (s.c.length ? 'Votre nom n\'est pas dans la liste ? Écrivez-le :' : 'Votre prénom et votre nom') + '</label><input type="text" id="quiLibre" maxlength="60" autocomplete="name" placeholder="Prénom Nom">'
+      + '<button class="gros" onclick="ctcQui(' + i + ',-1)">Continuer</button><p class="note"><a href="#" onclick="ctcRetourSite();return false;">Changer de site</a></p></div>';
+    page(h);
+  };
+  window.ctcRetourSite = ecranSite;
+  window.ctcQui = function(i, j){
+    var s = S.cfg.sites[i], n = j >= 0 ? s.c[j] : String((el('quiLibre') || {}).value || '').replace(/\s+/g, ' ').trim();
+    if (!n || n.length < 2){ if (el('quiLibre')) el('quiLibre').focus(); return; }
+    S.moi = { site:s.s, qui:n }; ecrire('ctc_moi', S.moi); S.suivi = null; S.onglet = 'N'; S.relance = {}; S.confirme = ''; demarrer();
+  };
+
+  // ── 2) L'écran principal ──
+  function demarrer(){
+    el('tete').hidden = false; el('moiTxt').textContent = S.moi.qui + ' — ' + S.moi.site;
+    S.f = lire('ctc_brouillon') || vide(); if (!S.f.u) S.f.u = hasard(16); if (S.f.accord == null) S.f.accord = true;
+    S.suivi = lire('ctc_suivi_' + S.moi.site) || null;
+    onglet(S.onglet); rafraichir();
+  }
+  function onglet(o){
+    S.onglet = o; ['N', 'M', 'C'].forEach(function(x){ el('ong' + x).setAttribute('aria-pressed', x === o ? 'true' : 'false'); });
+    if (o === 'N') ecranNouveau(); else if (o === 'M') ecranMes(); else ecranClassement();
+    try { window.scrollTo(0, 0); } catch (e) {}
+  }
+  el('ongN').onclick = function(){ onglet('N'); }; el('ongM').onclick = function(){ onglet('M'); rafraichir(); }; el('ongC').onclick = function(){ onglet('C'); rafraichir(); };
+  el('moiChanger').onclick = function(e){ e.preventDefault(); if (S.envoi) return; ecrire('ctc_moi', null); S.moi = null; ecranSite(); };
+
+  function aideRaccourci(){
+    var seul = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+    if (seul || lire('ctc_aide_vue')) return '';
+    var ios = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    return '<div class="aide" id="aide"><div><b>Gardez cette page sous le doigt.</b> ' + (ios ? 'Dans Safari : bouton <b>Partager</b> (le carré avec la flèche), puis <b>« Sur l\'écran d\'accueil »</b>.'
+      : 'Dans Chrome : menu <b>⋮</b> en haut à droite, puis <b>« Ajouter à l\'écran d\'accueil »</b>.') + ' L\'icône Hurelle ouvrira directement cette page.</div><button aria-label="Fermer" onclick="ctcAide()">×</button></div>';
+  }
+  window.ctcAide = function(){ ecrire('ctc_aide_vue', 1); var a = el('aide'); if (a) a.remove(); };
+
+  // ── 3) Nouveau contact ──
+  function champ(id, lib, type, extra){ return '<div><label class="t" for="f_' + id + '">' + lib + '</label><input type="' + (type || 'text') + '" id="f_' + id + '" value="' + E(S.f[id]) + '" oninput="ctcSaisie(\'' + id + '\',this.value)" ' + (extra || '') + '></div>'; }
+  function ecranNouveau(){
+    var f = S.f, vend = f.veut === 'VENDRE' || f.veut === 'LES_DEUX', achete = f.veut === 'ACHETER' || f.veut === 'LES_DEUX', enc = !!S.envoi;
+    var h = aideRaccourci() + (S.merci ? '<div class="merci">' + E(S.merci) + '</div>' : '');
+    h += '<div class="carte"><h1>Nouveau contact</h1><label class="t">Que veut le client ?</label><div class="choix">';
+    Object.keys(VEUT).forEach(function(k){ h += '<button aria-pressed="' + (f.veut === k) + '" onclick="ctcVeut(\'' + k + '\')">' + VEUT[k] + '</button>'; });
+    h += '</div>' + champ('nom', 'Nom du client', 'text', 'maxlength="80" autocomplete="off" autocapitalize="characters"')
+      + '<div class="deux">' + champ('tel', 'Téléphone', 'tel', 'maxlength="20" inputmode="tel" autocomplete="off"') + champ('mail', 'Mail (si vous l\'avez)', 'email', 'maxlength="120" autocomplete="off" autocapitalize="none"') + '</div>';
+    if (vend) h += '<div class="deux">' + champ('immat', 'Immatriculation de son véhicule', 'text', 'maxlength="12" autocomplete="off" autocapitalize="characters" placeholder="AB-123-CD"') + champ('km', 'Kilométrage', 'text', 'maxlength="9" inputmode="numeric" autocomplete="off"') + '</div>';
+    if (achete) h += '<div class="deux">' + (f.veut === 'ACHETER' ? champ('budget', 'Budget pour l\'achat (€)', 'text', 'maxlength="9" inputmode="numeric" autocomplete="off"')
+                                                                : champ('ajout', 'Montant qu\'il peut rajouter en plus de la reprise (€)', 'text', 'maxlength="9" inputmode="numeric" autocomplete="off"') + champ('budget', 'ou budget total pour l\'achat (€)', 'text', 'maxlength="9" inputmode="numeric" autocomplete="off"')) + '</div>';
+    h += '<label class="t" for="f_occasion">À quelle occasion ?</label><select id="f_occasion" onchange="ctcSaisie(\'occasion\',this.value)"><option value="">—</option>' + OCCASIONS.map(function(o){ return '<option' + (f.occasion === o ? ' selected' : '') + '>' + E(o) + '</option>'; }).join('') + '</select>';
+    h += '<label class="t">Photos' + (vend ? ' du véhicule' : '') + ' (facultatif, ' + MAX_PHOTOS + ' au plus)</label><div class="choix">'
+      + '<label class="fichier">📷 Prendre une photo<input type="file" accept="image/*" capture="environment" onchange="ctcPhotos(this)"' + (enc ? ' disabled' : '') + '></label>'
+      + '<label class="fichier">🖼 Choisir des photos<input type="file" accept="image/*" multiple onchange="ctcPhotos(this)"' + (enc ? ' disabled' : '') + '></label></div><div class="vignettes" id="vignettes">' + vignettes() + '</div>';
+    h += '<label class="t" for="f_note">Note pour le vendeur</label><textarea id="f_note" maxlength="1500" oninput="ctcSaisie(\'note\',this.value)" placeholder="Ce qu\'il cherche, quand le rappeler, état du véhicule…">' + E(f.note) + '</textarea>';
+    h += '<label class="case"><input type="checkbox" id="f_accord"' + (f.accord ? ' checked' : '') + ' onchange="ctcSaisie(\'accord\',this.checked)"><span>Le client est d\'accord pour être rappelé par Hurelle Automobiles.</span></label>';
+    if (S.pb) h += '<div class="alerte" id="pb">' + E(S.pb) + '</div>';
+    h += '<button class="gros" id="envoyer" onclick="ctcEnvoyer()"' + (enc ? ' disabled' : '') + '>' + (enc ? E(S.envoi) : 'Envoyer à Hurelle Automobiles') + '</button>'
+      + '<p class="note">Le vendeur reçoit le contact tout de suite. Vous suivez la suite dans « Mes contacts ».</p></div>';
+    page(h);
+  }
+  function vignettes(){ return S.photos.map(function(p, i){ return '<div><img src="data:image/jpeg;base64,' + p + '" alt="Photo ' + (i + 1) + '">' + (S.envoi ? '' : '<button aria-label="Retirer la photo ' + (i + 1) + '" onclick="ctcRetirer(' + i + ')">×</button>') + '</div>'; }).join(''); }
+  window.ctcSaisie = function(k, v){ S.f[k] = v; S.merci = ''; var b = {}; for (var x in S.f) b[x] = S.f[x]; ecrire('ctc_brouillon', b); };
+  window.ctcVeut = function(k){ if (S.envoi) return; garder(); S.f.veut = k; ctcSaisie('veut', k); ecranNouveau(); };
+  function garder(){ ['nom', 'tel', 'mail', 'immat', 'km', 'budget', 'ajout', 'note'].forEach(function(k){ var e = el('f_' + k); if (e) S.f[k] = e.value; }); }
+  window.ctcRetirer = function(i){ S.photos.splice(i, 1); el('vignettes').innerHTML = vignettes(); };
+  function reduire(f){
+    return new Promise(function(ok, ko){
+      var url = URL.createObjectURL(f), img = new Image();
+      img.onload = function(){
+        try {
+          var e = Math.min(1, MAX_COTE / Math.max(img.naturalWidth, img.naturalHeight)), c = document.createElement('canvas');
+          c.width = Math.max(1, Math.round(img.naturalWidth * e)); c.height = Math.max(1, Math.round(img.naturalHeight * e));
+          var x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height);
+          var d = c.toDataURL('image/jpeg', QUALITE).split('base64,')[1] || ''; URL.revokeObjectURL(url);
+          if (d.length < 200) ko(new Error('illisible')); else ok(d);
+        } catch (er) { URL.revokeObjectURL(url); ko(er); }
+      };
+      img.onerror = function(){ URL.revokeObjectURL(url); ko(new Error('illisible')); };
+      img.src = url;
+    });
+  }
+  window.ctcPhotos = function(input){
+    var fs = Array.prototype.slice.call(input.files || []); input.value = ''; if (!fs.length || S.envoi) return;
+    garder(); S.pb = '';
+    var suite = Promise.resolve(), rates = 0;
+    fs.forEach(function(f){ suite = suite.then(function(){ if (S.photos.length >= MAX_PHOTOS) return; return reduire(f).then(function(d){ S.photos.push(d); }, function(){ rates++; }); }); });
+    suite.then(function(){
+      if (rates) S.pb = rates + ' photo' + (rates > 1 ? 's n\'ont' : ' n\'a') + ' pas pu être lue' + (rates > 1 ? 's' : '') + ' par votre téléphone.';
+      else if (fs.length && S.photos.length >= MAX_PHOTOS && fs.length > 1) S.pb = '';
+      if (S.onglet === 'N') ecranNouveau();
+    });
+  };
+  window.ctcEnvoyer = function(){
+    if (S.envoi) return; garder(); var f = S.f; S.merci = '';
+    var tel = String(f.tel || '').replace(/\D/g, ''), pb = '';
+    if (!f.veut) pb = 'Indiquez ce que veut le client : vendre, acheter, ou les deux.';
+    else if (String(f.nom || '').trim().length < 2) pb = 'Indiquez le nom du client.';
+    else if (tel.length < 9) pb = 'Le téléphone du client n\'est pas complet.';
+    else if (String(f.mail || '').trim() && !/^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/.test(String(f.mail).trim())) pb = 'L\'adresse mail n\'est pas correcte. Corrigez-la ou effacez-la.';
+    else if (!f.accord) pb = 'Le client doit être d\'accord pour être rappelé par Hurelle Automobiles.';
+    if (pb){ S.pb = pb; ecranNouveau(); var p = el('pb'); if (p && p.scrollIntoView) p.scrollIntoView({ block:'center' }); return; }
+    S.pb = ''; S.envoi = 'Envoi du contact…'; ecranNouveau();
+    var d = { u:f.u, site:S.moi.site, qui:S.moi.qui, veut:f.veut, nom:f.nom, tel:f.tel, mail:String(f.mail || '').trim(), immat:f.immat, km:f.km, budget:f.budget, ajout:f.ajout, occasion:f.occasion, note:f.note, accord:true };
+    var photos = S.photos.slice(), perdues = 0, ref = null;
+    function etape(t){ S.envoi = t; var b = el('envoyer'); if (b) b.textContent = t; }
+    srv('envoyer', [S.cle, d]).then(function(r){
+      if (!r || !r.ok) throw { dit:(r && r.message) || PANNE };
+      ref = r; var suite = Promise.resolve();
+      if (!r.deja) photos.forEach(function(p, i){
+        suite = suite.then(function(){ etape('Envoi de la photo ' + (i + 1) + ' sur ' + photos.length + '…'); return srv('photo', [S.cle, r.id, r.jeton, p]).then(function(x){ if (!x || !x.ok) perdues++; }, function(){ perdues++; }); });
+      });
+      return suite.then(function(){ etape('Dernière étape…'); return srv('terminer', [S.cle, r.id, r.jeton]).then(null, function(){ return { ok:true, attente:true }; }); });
+    }).then(function(){
+      // PATCH LOCAL IMMÉDIAT : le contact apparaît tout de suite dans « Mes contacts », avant la relecture du serveur
+      var L = { id:ref.id, ts:Date.now(), le:new Date().toLocaleDateString('fr-FR'), veut:f.veut, client:clientCourt(f.nom), immat:String(f.immat || '').toUpperCase(), par:S.moi.qui, moi:true, etat:'NOUVEAU', pts:(S.cfg.pts || {}).c || 1, suiveur:null, relances:0, relancable:false };
+      if (S.suivi && S.suivi.contacts){ if (!S.suivi.contacts.some(function(x){ return x.id === L.id; })) S.suivi.contacts.unshift(L); } else S.suivi = { contacts:[L], classement:[], moi:{ n:1, pts:L.pts } };
+      S.merci = 'Contact envoyé à Hurelle Automobiles.' + (perdues ? ' ' + perdues + ' photo' + (perdues > 1 ? 's ne sont' : ' n\'est') + ' pas partie' + (perdues > 1 ? 's' : '') + ' : dites-le au vendeur.' : '');
+      S.envoi = null; S.photos = []; S.f = vide(); S.f.u = hasard(16); ecrire('ctc_brouillon', null);
+      onglet('N'); rafraichir();
+    }, function(e){
+      S.envoi = null; S.pb = (e && e.dit) || 'Envoi interrompu : vérifiez votre connexion et appuyez de nouveau sur Envoyer. Rien n\'est envoyé en double.'; ecranNouveau();
+    });
+  };
+  function clientCourt(n){ var m = String(n || '').trim().toUpperCase().split(/\s+/); return m[0] ? m[0] + (m[1] ? ' ' + m[1].charAt(0) + '.' : '') : 'Client'; }
+
+  // ── 4) Mes contacts ──
+  var LIB = { ENVOI:['Envoi en cours', 'gris'], NOUVEAU:['Pas encore pris en charge', ''], PRIS:['Pris en charge', ''], RAPPELE:['Client rappelé', 'plein'], ABOUTI:['Abouti', 'plein'], SANS_SUITE:['Sans suite', 'gris'], INVALIDE:['Non retenu', 'gris'] };
+  function ecranMes(){
+    var R = S.suivi, h = '';
+    if (!R || !R.contacts){ page('<div class="carte">' + (S.majPb ? '<div class="alerte" style="margin-top:0;">' + E(S.majPb) + '</div>' : 'Chargement de vos contacts…') + '</div>'); return; }
+    var miens = R.contacts.filter(function(c){ return c.moi; }), autres = R.contacts.filter(function(c){ return !c.moi; });
+    function ligne(c){
+      var lib = LIB[c.etat] || [c.etat, ''], t = c.etat === 'ABOUTI' ? [c.rachat ? 'Rachat fait' : '', c.vente ? 'Vente faite' : ''].filter(String).join(' + ') : lib[0];
+      var x = '<div class="ligne"><div class="l1"><b>' + E(c.client) + (c.immat ? ' · ' + E(c.immat) : '') + '</b><span class="etat ' + lib[1] + '">' + E(t) + '</span></div>'
+        + '<div class="petit">' + E(c.le) + ' · ' + E(VEUT[c.veut] || '') + (c.moi ? '' : ' · envoyé par ' + E(c.par)) + ' · <span class="pts">' + c.pts + ' pt' + (c.pts > 1 ? 's' : '') + '</span></div>';
+      if (c.motif) x += '<div class="petit">Motif : ' + E(c.motif) + '</div>';
+      if (c.suiveur) x += '<div class="suiveur">Suivi par <b>' + E(c.suiveur.p) + '</b>' + (c.suiveur.t ? ' · <b>' + E(c.suiveur.t) + '</b>' : '') + '</div>';
+      else if (c.etat === 'NOUVEAU') x += '<div class="petit">Aucun vendeur ne s\'est encore déclaré suiveur.</div>';
+      if (c.moi && (c.etat === 'NOUVEAU' || c.etat === 'PRIS')){
+        var fait = S.relance[c.id];
+        if (fait) x += '<div class="petit" style="margin-top:8px;font-weight:700;">' + E(fait) + '</div>';
+        else if (S.confirme === c.id) x += '<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;"><button class="second" onclick="ctcRelancer(\'' + c.id + '\')">Oui, relancer ' + E(c.suiveur ? c.suiveur.p : 'les vendeurs') + '</button><button class="second" style="border-color:#d4d4d0;" onclick="ctcConfirme(\'\')">Annuler</button></div>';
+        else if (c.relancable) x += '<div style="margin-top:8px;"><button class="second" onclick="ctcConfirme(\'' + c.id + '\')">Relancer ' + E(c.suiveur ? c.suiveur.p : 'les vendeurs') + '</button>' + (c.relances ? ' <span class="petit">déjà relancé ' + c.relances + ' fois</span>' : '') + '</div>';
+        else if (c.relances) x += '<div class="petit">Relancé ' + c.relances + ' fois.</div>';
+      }
+      return x + '</div>';
+    }
+    h += '<div class="carte"><h1>Mes contacts</h1><p class="note" style="margin-bottom:6px;">' + (R.moi ? R.moi.n + ' contact' + (R.moi.n > 1 ? 's' : '') + ' · <span class="pts">' + R.moi.pts + ' point' + (R.moi.pts > 1 ? 's' : '') + '</span> apportés à ' + E(S.moi.site) : '') + (R.maj ? ' · mis à jour à ' + E(R.maj) : '') + '</p>'
+      + (S.majPb ? '<div class="alerte">' + E(S.majPb) + '</div>' : '') + (miens.length ? miens.map(ligne).join('') : '<p class="note">Vous n\'avez pas encore envoyé de contact. Onglet « Nouveau » pour commencer.</p>') + '</div>';
+    if (autres.length) h += '<div class="carte"><h2>Les autres contacts de ' + E(S.moi.site) + '</h2>' + autres.map(ligne).join('') + '</div>';
+    h += '<p class="note">Le téléphone du client n\'est jamais affiché ici. Vous pouvez relancer le vendeur une fois par jour, tant que le client n\'a pas été rappelé.</p>';
+    page(h);
+  }
+  window.ctcConfirme = function(id){ S.confirme = id; ecranMes(); };
+  window.ctcRelancer = function(id){
+    S.confirme = ''; S.relance[id] = 'Relance en cours…'; ecranMes();
+    srv('relancer', [S.cle, id, S.moi.site, S.moi.qui]).then(function(r){
+      S.relance[id] = r && r.ok ? 'Relance envoyée' + (r.vers ? ' à ' + r.vers : ' aux vendeurs') + '.' : ((r && r.message) || PANNE);
+      if (r && r.ok && S.suivi) S.suivi.contacts.forEach(function(c){ if (c.id === id){ c.relances = r.relances; c.relancable = false; } });
+      if (S.onglet === 'M') ecranMes();
+    }, function(){ S.relance[id] = PANNE; if (S.onglet === 'M') ecranMes(); });
+  };
+
+  // ── 5) Classement par entité ──
+  function ecranClassement(){
+    var R = S.suivi, P = (R && R.pts) || (S.cfg && S.cfg.pts) || { c:1, r:10, v:10 };
+    if (!R || !R.classement || !R.classement.length){ page('<div class="carte">' + (S.majPb ? '<div class="alerte" style="margin-top:0;">' + E(S.majPb) + '</div>' : 'Chargement du classement…') + '</div>'); return; }
+    var max = Math.max.apply(null, R.classement.map(function(x){ return x.pts; }).concat([1]));
+    var h = '<div class="carte"><h1>Classement par entité</h1><p class="note" style="margin-bottom:8px;">Contact envoyé : ' + P.c + ' point · rachat fait : ' + P.r + ' points · vente faite : ' + P.v + ' points. Les points se cumulent' + (S.cfg && S.cfg.fin ? ' jusqu\'au ' + E(S.cfg.fin) : '') + '.</p>';
+    R.classement.forEach(function(x, i){
+      h += '<div class="rang' + (x.s === S.moi.site ? ' moi' : '') + '"><span class="pts">' + (i + 1) + '</span><b>' + E(x.s) + '</b><span class="pts">' + x.pts + ' pt' + (x.pts > 1 ? 's' : '') + '</span>'
+        + '<div class="barre"><i style="width:' + Math.round(100 * x.pts / max) + '%"></i></div><span></span><span class="petit" style="grid-column:2 / 4;">' + x.n + ' contact' + (x.n > 1 ? 's' : '') + ' · ' + x.rachats + ' rachat' + (x.rachats > 1 ? 's' : '') + ' · ' + x.ventes + ' vente' + (x.ventes > 1 ? 's' : '') + '</span></div>';
+    });
+    page(h + '</div>' + (R.maj ? '<p class="note">Mis à jour à ' + E(R.maj) + '.</p>' : ''));
+  }
+
+  // ── 6) Mise à jour : à l'ouverture, au retour sur la page, et chaque minute tant qu'elle est affichée ──
+  var enCours = false;
+  function rafraichir(){
+    if (!S.moi || enCours || S.envoi) return; enCours = true;
+    srv('suivi', [S.cle, S.moi.site, S.moi.qui]).then(function(r){
+      enCours = false;
+      if (r && r.ok){ S.suivi = r; S.majPb = ''; ecrire('ctc_suivi_' + S.moi.site, r); }
+      else { S.majPb = (r && r.message) || PANNE; if (r && r.code === 'CLE'){ sansCle(r.message); return; } }
+      if (!S.confirme && S.onglet === 'M') ecranMes(); else if (S.onglet === 'C') ecranClassement();
+    }, function(){ enCours = false; S.majPb = 'Pas de connexion : ce que vous voyez date de votre dernière visite.'; if (S.onglet === 'M' && !S.confirme) ecranMes(); else if (S.onglet === 'C') ecranClassement(); });
+  }
+  setInterval(function(){ if (!document.hidden && S.moi && S.onglet !== 'N') rafraichir(); }, 60000);
+  document.addEventListener('visibilitychange', function(){ if (!document.hidden && S.moi) rafraichir(); });
+  window._ctcEtat = S;                                                      // pour les essais
+
+  // ── Départ : la clé vient du lien (…?k=…), puis reste sur le téléphone ──
+  var k = (/[?&]k=([A-Za-z0-9_-]{12,60})/.exec(location.search) || [])[1] || '';
+  if (k) ecrire('ctc_k', k); else k = lire('ctc_k') || '';
+  if (!k){ sansCle(''); return; }
+  S.cle = k; S.cfg = lire('ctc_cfg'); S.moi = lire('ctc_moi');
+  function accepter(){ if (S.moi && !S.cfg.sites.some(function(s){ return s.s === S.moi.site; })) { S.moi = null; ecrire('ctc_moi', null); } if (S.moi) demarrer(); else ecranSite(); }
+  if (S.cfg && S.cfg.sites) accepter();                                     // affichage immédiat avec la liste gardée, puis relecture
+  srv('config', [S.cle]).then(function(r){
+    if (!r || !r.ok){ if (r && r.code === 'CLE'){ ecrire('ctc_k', null); ecrire('ctc_cfg', null); sansCle(r.message); } else if (!S.cfg) sansCle((r && r.message) || PANNE); return; }
+    var avant = !!S.cfg; S.cfg = { sites:r.sites, pts:r.pts, fin:r.fin }; ecrire('ctc_cfg', S.cfg);
+    if (!avant || (!S.moi && !S.envoi && el('tete').hidden && !el('quiLibre'))) accepter();
+  }, function(){ if (!S.cfg) sansCle(PANNE); });
+})();
+</script>
+</body>
+</html>
+<!-- ══════ FIN contacts.html v1.0 ══════ -->
