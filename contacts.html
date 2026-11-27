@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- ════════════════════════════════════════════════════════════════════════
-     contacts.html — v1.1 — 26/11/2026 (classement : l'équipe de référence à battre et le champagne ; va avec ContactsGuichet.gs v1.2) · v1.0 — APPORT DE CONTACTS PAR LES CONSEILLERS CLIENTS DU GROUPE (BLOC v152)
+     contacts.html — v1.2 — 26/11/2026, 19 h 20 (Lionel : « il faut qu'ils sélectionnent leur nom » — plus de nom tapé à la main, le conseiller se choisit dans la liste de son site) · v1.1 (classement : l'équipe de référence à battre et le champagne ; va avec ContactsGuichet.gs v1.2) · v1.0 — APPORT DE CONTACTS PAR LES CONSEILLERS CLIENTS DU GROUPE (BLOC v152)
      Page hébergée hors de Google (à côté de depot.html), ouverte par UN SEUL lien pour tout le groupe : …/contacts.html?k=LA_CLE
      Le conseiller choisit son site puis son nom UNE fois (gardé sur le téléphone), puis envoie un contact : nom, téléphone,
        ce que veut le client (vendre, acheter, les deux), véhicule, budget, photos prises ou choisies, note.
@@ -125,14 +125,14 @@
     var s = S.cfg.sites[i]; if (!s) return;
     var h = '<div class="carte"><h1>' + E(s.s) + '</h1><h2>Qui êtes-vous ?</h2><div class="choix">';
     s.c.forEach(function(n, j){ h += '<button onclick="ctcQui(' + i + ',' + j + ')">' + E(n) + '</button>'; });
-    h += '</div><label class="t" for="quiLibre">' + (s.c.length ? 'Votre nom n\'est pas dans la liste ? Écrivez-le :' : 'Votre prénom et votre nom') + '</label><input type="text" id="quiLibre" maxlength="60" autocomplete="name" placeholder="Prénom Nom">'
-      + '<button class="gros" onclick="ctcQui(' + i + ',-1)">Continuer</button><p class="note"><a href="#" onclick="ctcRetourSite();return false;">Changer de site</a></p></div>';
+    h += '</div>' + (s.c.length ? '<p class="note">Votre nom n\'est pas dans la liste ? Demandez à Hurelle Automobiles de vous ajouter (04 76 23 51 65).</p>'
+                                : '<div class="alerte">Aucun conseiller n\'est encore enregistré pour ce site. Demandez à Hurelle Automobiles de vous ajouter (04 76 23 51 65).</div>')
+      + '<p class="note"><a href="#" onclick="ctcRetourSite();return false;">Changer de site</a></p></div>';
     page(h);
   };
   window.ctcRetourSite = ecranSite;
   window.ctcQui = function(i, j){
-    var s = S.cfg.sites[i], n = j >= 0 ? s.c[j] : String((el('quiLibre') || {}).value || '').replace(/\s+/g, ' ').trim();
-    if (!n || n.length < 2){ if (el('quiLibre')) el('quiLibre').focus(); return; }
+    var s = S.cfg.sites[i], n = s && j >= 0 ? s.c[j] : ''; if (!n) return;
     S.moi = { site:s.s, qui:n }; ecrire('ctc_moi', S.moi); S.suivi = null; S.onglet = 'N'; S.relance = {}; S.confirme = ''; demarrer();
   };
 
@@ -321,15 +321,17 @@
   if (k) ecrire('ctc_k', k); else k = lire('ctc_k') || '';
   if (!k){ sansCle(''); return; }
   S.cle = k; S.cfg = lire('ctc_cfg'); S.moi = lire('ctc_moi');
-  function accepter(){ if (S.moi && !S.cfg.sites.some(function(s){ return s.s === S.moi.site; })) { S.moi = null; ecrire('ctc_moi', null); } if (S.moi) demarrer(); else ecranSite(); }
+  // v1.2 : nom retiré de la liste ou transféré → il se rechoisit
+  function accepter(){ if (S.moi && !S.cfg.sites.some(function(s){ return s.s === S.moi.site && s.c.indexOf(S.moi.qui) >= 0; })) { S.moi = null; ecrire('ctc_moi', null); } if (S.moi) demarrer(); else ecranSite(); }
   if (S.cfg && S.cfg.sites) accepter();                                     // affichage immédiat avec la liste gardée, puis relecture
   srv('config', [S.cle]).then(function(r){
     if (!r || !r.ok){ if (r && r.code === 'CLE'){ ecrire('ctc_k', null); ecrire('ctc_cfg', null); sansCle(r.message); } else if (!S.cfg) sansCle((r && r.message) || PANNE); return; }
     var avant = !!S.cfg; S.cfg = { sites:r.sites, pts:r.pts, fin:r.fin }; ecrire('ctc_cfg', S.cfg);
-    if (!avant || (!S.moi && !S.envoi && el('tete').hidden && !el('quiLibre'))) accepter();
+    var connu = S.moi && S.cfg.sites.some(function(x){ return x.s === S.moi.site && x.c.indexOf(S.moi.qui) >= 0; });
+    if (!avant || (S.moi && !connu && !S.envoi) || (!S.moi && !S.envoi && el('tete').hidden && !document.querySelector('#page h2'))) accepter();
   }, function(){ if (!S.cfg) sansCle(PANNE); });
 })();
 </script>
 </body>
 </html>
-<!-- ══════ FIN contacts.html v1.1 ══════ -->
+<!-- ══════ FIN contacts.html v1.2 ══════ -->
