@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- ════════════════════════════════════════════════════════════════════════
-     index.html — v1.1 — 15/11/2026 — PAGE DE SIGNATURE DES CERFA, HÉBERGÉE HORS DE GOOGLE (hébergement gratuit de pages statiques)
+     index.html — v1.2 — 28/11/2026 (cotitulaire sur la demande de certificat, comme le bloc CERFA CESSION v1.8) · v1.1 — 15/11/2026 — PAGE DE SIGNATURE DES CERFA, HÉBERGÉE HORS DE GOOGLE (hébergement gratuit de pages statiques)
      Même écran et même moteur que PortailPage.html v1.2 (fabriquée à partir d'elle). Va avec PortailClient.gs v1.4 (doPost, rangement automatique).
      POURQUOI : servie par script.google.com, la page casse chez les clients qui ont plusieurs comptes Google connectés
        (« Impossible d'ouvrir le fichier », adresse en /u/1/). Hébergée ailleurs, le navigateur n'envoie plus ces comptes.
@@ -224,6 +224,8 @@
         if (!a.morale){ Dt(a.neLe, GD.neJ, GD.neM, GD.neA, 517); T(a.neA, 264, 515, 294); }
         T(a.num, 130, 567, 60, 8); T(a.ext, 206, 567, 72, 8); T(a.type, 292, 567, 112, 8); T(a.voie, 420, 567, 436, 8);
         T(a.tel, 534, 589, 322, 8); Cs(chiffres(a.cp), GD.cp, 616, 9); T(a.ville, 232, 615, 286, 8.5); T(a.email, 534, 615, 322, 8);
+        var coNom = String(D.coNom || '').trim();                          // cotitulaire (facultatif) : nom + nombre de titulaires — seulement sur la demande de certificat
+        if (coNom){ Cs(String(Math.min(9, Math.max(2, parseInt(D.coNb, 10) || 2))), [709.5, 731], 641, 10); T(coNom, 128, 656, 242, 8.5); }
         T(D.lieu, 83, 1103, 68, 7); T(D.dateVente, 176, 1103, 70, 7);
         if (D.opposition) X(255, 1196);
         if (sig){ o.image(sig, ZONE_D); T(opt.trace || '', 52, 1170, 184, 5); }
